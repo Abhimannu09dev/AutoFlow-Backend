@@ -1,0 +1,6 @@
+@AutoFlow_Backend_HostAddress = http://localhost:5294
+
+GET {{AutoFlow_Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
