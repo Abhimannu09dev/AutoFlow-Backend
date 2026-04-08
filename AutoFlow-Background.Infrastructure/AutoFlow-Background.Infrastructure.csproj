@@ -23,4 +23,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AutoFlow-Backend.Application\AutoFlow-Backend.Application.csproj" />
+  </ItemGroup>
+
 </Project>

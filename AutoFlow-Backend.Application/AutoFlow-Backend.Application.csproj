@@ -14,4 +14,8 @@
     <Folder Include="Services\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AutoFlow-Backend.Domain\AutoFlow-Backend.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

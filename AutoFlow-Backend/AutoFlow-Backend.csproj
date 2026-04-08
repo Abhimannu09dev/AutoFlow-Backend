@@ -15,4 +15,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AutoFlow-Backend.Application\AutoFlow-Backend.Application.csproj" />
+    <ProjectReference Include="..\AutoFlow-Background.Infrastructure\AutoFlow-Background.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
