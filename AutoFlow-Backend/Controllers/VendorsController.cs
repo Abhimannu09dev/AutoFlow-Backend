@@ -22,7 +22,7 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.CreateAsync(request, cancellationToken);
-        if (!response.Success)
+        if (!response.Status)
         {
             return BadRequest(response);
         }
@@ -41,7 +41,7 @@ public class VendorsController : ControllerBase
     public async Task<ActionResult<ApiResponse<VendorResponse>>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var response = await _vendorService.GetByIdAsync(id, cancellationToken);
-        if (!response.Success)
+        if (!response.Status)
         {
             return NotFound(response);
         }
@@ -56,7 +56,7 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.UpdateAsync(id, request, cancellationToken);
-        if (!response.Success)
+        if (!response.Status)
         {
             if (string.Equals(response.Message, "Vendor not found.", StringComparison.Ordinal))
             {
@@ -73,7 +73,7 @@ public class VendorsController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _vendorService.DeleteAsync(id, cancellationToken);
-        if (!response.Success)
+        if (!response.Status)
         {
             return NotFound(response);
         }
