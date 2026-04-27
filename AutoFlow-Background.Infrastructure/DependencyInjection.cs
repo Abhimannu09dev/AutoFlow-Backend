@@ -24,6 +24,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IVendorService, VendorService>();
+        services.AddScoped<IPartService, PartService>();
 
         return services;
     }

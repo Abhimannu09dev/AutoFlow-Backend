@@ -12,6 +12,7 @@ public class AppDbContext : DbContext, IAppDbContext
     }
 
     public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<Part> Parts => Set<Part>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,53 @@ public class AppDbContext : DbContext, IAppDbContext
 
             entity.HasIndex(v => v.VendorName);
             entity.HasIndex(v => v.Phone);
+        });
+
+        modelBuilder.Entity<Part>(entity =>
+        {
+            entity.ToTable("Parts");
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.PartName)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            entity.Property(p => p.PartNumber)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(p => p.Brand)
+                .HasMaxLength(100);
+
+            entity.Property(p => p.Category)
+                .HasMaxLength(100);
+
+            entity.Property(p => p.Description)
+                .HasMaxLength(500);
+
+            entity.Property(p => p.UnitPrice)
+                .HasColumnType("numeric(18,2)");
+
+            entity.Property(p => p.SellingPrice)
+                .HasColumnType("numeric(18,2)");
+
+            entity.Property(p => p.MinimumStockLevel)
+                .HasDefaultValue(10);
+
+            entity.Property(p => p.IsActive)
+                .HasDefaultValue(true);
+
+            entity.Property(p => p.CreatedAt)
+                .IsRequired();
+
+            entity.HasOne(p => p.Vendor)
+                .WithMany()
+                .HasForeignKey(p => p.VendorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(p => p.PartName);
+            entity.HasIndex(p => p.PartNumber);
+            entity.HasIndex(p => p.VendorId);
         });
 
         base.OnModelCreating(modelBuilder);
