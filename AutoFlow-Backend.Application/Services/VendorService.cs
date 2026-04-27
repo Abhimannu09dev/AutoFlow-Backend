@@ -28,7 +28,7 @@ public class VendorService : IVendorService
         var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
         if (errors.Count > 0)
         {
-            return Fail<VendorResponse>("Validation failed.", errors);
+            return FailFromValidation<VendorResponse>(errors);
         }
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
@@ -38,7 +38,7 @@ public class VendorService : IVendorService
 
         if (duplicateExists)
         {
-            return Fail<VendorResponse>("Vendor name already exists.", ["Duplicate vendor name is not allowed."]);
+            return Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
         var vendor = new Vendor
@@ -95,7 +95,7 @@ public class VendorService : IVendorService
         var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
         if (errors.Count > 0)
         {
-            return Fail<VendorResponse>("Validation failed.", errors);
+            return FailFromValidation<VendorResponse>(errors);
         }
 
         var vendor = await _dbContext.Vendors
@@ -113,7 +113,7 @@ public class VendorService : IVendorService
 
         if (duplicateExists)
         {
-            return Fail<VendorResponse>("Vendor name already exists.", ["Duplicate vendor name is not allowed."]);
+            return Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
         vendor.VendorName = request.VendorName.Trim();
@@ -268,19 +268,25 @@ public class VendorService : IVendorService
     {
         return new ApiResponse<T>
         {
-            Success = true,
+            Status = true,
             Message = message,
             Data = data
         };
     }
 
-    private static ApiResponse<T> Fail<T>(string message, List<string>? errors = null)
+    private static ApiResponse<T> Fail<T>(string message)
     {
         return new ApiResponse<T>
         {
-            Success = false,
+            Status = false,
             Message = message,
-            Errors = errors ?? new List<string>()
+            Data = default
         };
+    }
+
+    private static ApiResponse<T> FailFromValidation<T>(List<string> errors)
+    {
+        var message = errors.Count > 0 ? string.Join(" ", errors) : "Validation failed.";
+        return Fail<T>(message);
     }
 }
