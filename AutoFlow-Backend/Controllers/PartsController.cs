@@ -1,12 +1,14 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Parts;
 using AutoFlow_Backend.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/parts")]
+[Authorize(Roles = "Admin")]
 public class PartsController : ControllerBase
 {
     private readonly IPartService _partService;
