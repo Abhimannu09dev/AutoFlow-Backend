@@ -1,7 +1,7 @@
 using AutoFlow_Backend.Application.Models;
 using AutoFlow_Background.Infrastructure;
+using AutoFlow_Background.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -36,16 +36,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider
-        .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-    foreach (var role in new[] { "Admin", "Staff", "Customer" })
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole<Guid>(role));
-    }
-}
+await IdentitySeeder.SeedRolesAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
