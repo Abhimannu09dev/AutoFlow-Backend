@@ -1,12 +1,14 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vendors;
 using AutoFlow_Backend.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/vendors")]
+[Authorize(Roles = "Admin")]
 public class VendorsController : ControllerBase
 {
     private readonly IVendorService _vendorService;
