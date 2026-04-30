@@ -11,6 +11,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<Part> Parts => Set<Part>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
@@ -18,6 +19,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder); 
+
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("Customers");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).ValueGeneratedOnAdd();
+            entity.Property(c => c.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.Email).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.Phone).HasMaxLength(30);
+            entity.Property(c => c.Address).HasMaxLength(300);
+            entity.Property(c => c.CreatedAt).IsRequired();
+            entity.HasIndex(c => c.Email).IsUnique();
+        });
 
         modelBuilder.Entity<Vendor>(entity =>
         {

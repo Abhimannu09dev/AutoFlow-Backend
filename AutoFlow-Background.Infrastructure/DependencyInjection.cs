@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IPartService, PartService>();
         services.AddScoped<IAuthService, AuthService>();
