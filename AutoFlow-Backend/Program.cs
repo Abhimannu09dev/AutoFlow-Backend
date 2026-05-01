@@ -30,7 +30,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    });
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
