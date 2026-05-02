@@ -362,8 +362,12 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# ASP.NET Core secrets — never commit real config
-**/appsettings.json
-**/appsettings.Development.json
-# Keep the example template
-!**/appsettings.Example.json
+# Ignore sensitive configs
+appsettings.json
+appsettings.Production.json
+
+# Allow development config
+!appsettings.Development.json
+
+# Keep example template
+!appsettings.Example.json
