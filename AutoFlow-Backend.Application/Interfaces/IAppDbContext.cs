@@ -7,5 +7,6 @@ public interface IAppDbContext
 {
     DbSet<Vendor> Vendors { get; }
     DbSet<Part> Parts { get; }
+    DbSet<Appointment> Appointments { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

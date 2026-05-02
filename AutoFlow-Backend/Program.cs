@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Models;
+using AutoFlow_Backend.Filters;
 using AutoFlow_Background.Infrastructure;
 using AutoFlow_Background.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,7 +31,22 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ApiResponseFilter>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+});
+
+// Disable automatic 400 response so controllers handle validation via ApiResponse
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
