@@ -20,14 +20,14 @@ public class CustomerService : ICustomerService
         _dbContext = dbContext;
     }
 
-    public async Task<ApiResponse<CustomerResponseDto>> CreateAsync(
+    public async Task<APIResponse> CreateAsync(
         CustomerCreateDto request,
         CancellationToken cancellationToken = default)
     {
         var validationErrors = Validate(request.FullName, request.Email, request.Phone, request.Address);
         if (validationErrors.Count > 0)
         {
-            return FailFromValidation<CustomerResponseDto>(validationErrors);
+            return ValidationFailure(validationErrors);
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
@@ -37,7 +37,7 @@ public class CustomerService : ICustomerService
 
         if (emailExists)
         {
-            return Fail<CustomerResponseDto>("Email is already registered.");
+            return Failure("Email is already registered.", 400);
         }
 
         var customer = new Customer
@@ -52,10 +52,10 @@ public class CustomerService : ICustomerService
         await _dbContext.Customers.AddAsync(customer, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Success("Customer created successfully.", Map(customer));
+        return Success("Customer created successfully.", Map(customer), 201);
     }
 
-    public async Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<APIResponse> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var customers = await _dbContext.Customers
             .AsNoTracking()
@@ -71,10 +71,10 @@ public class CustomerService : ICustomerService
             })
             .ToListAsync(cancellationToken);
 
-        return Success("Customers retrieved successfully.", customers);
+        return Success("Customers retrieved successfully.", customers, 200);
     }
 
-    public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<APIResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var customer = await _dbContext.Customers
             .AsNoTracking()
@@ -92,21 +92,21 @@ public class CustomerService : ICustomerService
 
         if (customer is null)
         {
-            return Fail<CustomerResponseDto>("Customer not found.");
+            return Failure("Customer not found.", 404);
         }
 
-        return Success("Customer retrieved successfully.", customer);
+        return Success("Customer retrieved successfully.", customer, 200);
     }
 
-    public async Task<ApiResponse<CustomerResponseDto>> UpdateAsync(
-        int id,
+    public async Task<APIResponse> UpdateAsync(
+        Guid id,
         CustomerUpdateDto request,
         CancellationToken cancellationToken = default)
     {
         var validationErrors = Validate(request.FullName, request.Email, request.Phone, request.Address);
         if (validationErrors.Count > 0)
         {
-            return FailFromValidation<CustomerResponseDto>(validationErrors);
+            return ValidationFailure(validationErrors);
         }
 
         var customer = await _dbContext.Customers
@@ -114,7 +114,7 @@ public class CustomerService : ICustomerService
 
         if (customer is null)
         {
-            return Fail<CustomerResponseDto>("Customer not found.");
+            return Failure("Customer not found.", 404);
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
@@ -124,7 +124,7 @@ public class CustomerService : ICustomerService
 
         if (emailExists)
         {
-            return Fail<CustomerResponseDto>("Email is already registered.");
+            return Failure("Email is already registered.", 400);
         }
 
         customer.FullName = request.FullName.Trim();
@@ -134,7 +134,7 @@ public class CustomerService : ICustomerService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Success("Customer updated successfully.", Map(customer));
+        return Success("Customer updated successfully.", Map(customer), 200);
     }
 
     private static CustomerResponseDto Map(Customer customer)
@@ -191,12 +191,25 @@ public class CustomerService : ICustomerService
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static ApiResponse<T> Success<T>(string message, T data)
-        => new() { Status = true, Message = message, Data = data };
+    private static APIResponse Success(string message, object data, int statusCode)
+        => new()
+        {
+            Success = true,
+            Message = message,
+            Data = data,
+            StatusCode = statusCode
+        };
 
-    private static ApiResponse<T> Fail<T>(string message)
-        => new() { Status = false, Message = message, Data = default };
+    private static APIResponse Failure(string message, int statusCode, List<string>? errors = null)
+        => new()
+        {
+            Success = false,
+            Message = message,
+            Data = null,
+            StatusCode = statusCode,
+            Errors = errors
+        };
 
-    private static ApiResponse<T> FailFromValidation<T>(List<string> errors)
-        => Fail<T>(errors.Count > 0 ? string.Join(" ", errors) : "Validation failed.");
+    private static APIResponse ValidationFailure(List<string> errors)
+        => Failure("Validation failed.", 400, errors);
 }

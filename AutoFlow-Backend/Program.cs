@@ -1,7 +1,10 @@
 using AutoFlow_Backend.Application.Models;
+using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Middleware;
 using AutoFlow_Background.Infrastructure;
 using AutoFlow_Background.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -43,7 +46,29 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
+                .ToList();
+
+            var response = new APIResponse
+            {
+                Success = false,
+                Message = "Validation failed.",
+                Data = null,
+                StatusCode = StatusCodes.Status400BadRequest,
+                Errors = errors
+            };
+
+            return new BadRequestObjectResult(response);
+        };
+    });
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
@@ -61,6 +86,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("FrontendCors");
 app.UseAuthentication(); // ← before UseAuthorization

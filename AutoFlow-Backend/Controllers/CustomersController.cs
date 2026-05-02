@@ -17,97 +17,81 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> Create(
+    public async Task<ActionResult<APIResponse>> Create(
         [FromBody] CustomerCreateDto request,
         CancellationToken cancellationToken)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var response = await _customerService.CreateAsync(request, cancellationToken);
-            if (!response.Status)
-            {
-                return BadRequest(response);
-            }
+            var modelErrors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
+                .ToList();
 
-            return CreatedAtAction(nameof(GetById), new { id = response.Data!.Id }, response);
-        }
-        catch
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<CustomerResponseDto>
+            var badRequestResponse = new APIResponse
             {
-                Status = false,
-                Message = "An unexpected error occurred.",
-                Data = null
-            });
+                Success = false,
+                Message = "Validation failed.",
+                Data = null,
+                StatusCode = StatusCodes.Status400BadRequest,
+                Errors = modelErrors
+            };
+
+            return BadRequest(badRequestResponse);
         }
+
+        var response = await _customerService.CreateAsync(request, cancellationToken);
+        if (!response.Success)
+        {
+            return BadRequest(response);
+        }
+
+        var createdCustomer = response.Data as CustomerResponseDto;
+        return CreatedAtAction(nameof(GetById), new { id = createdCustomer?.Id }, response);
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<CustomerResponseDto>>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<APIResponse>> GetAll(CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await _customerService.GetAllAsync(cancellationToken);
-            return Ok(response);
-        }
-        catch
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<List<CustomerResponseDto>>
-            {
-                Status = false,
-                Message = "An unexpected error occurred.",
-                Data = null
-            });
-        }
+        var response = await _customerService.GetAllAsync(cancellationToken);
+        return StatusCode(response.StatusCode, response);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> GetById(
-        int id,
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<APIResponse>> GetById(
+        Guid id,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await _customerService.GetByIdAsync(id, cancellationToken);
-            return response.Status ? Ok(response) : NotFound(response);
-        }
-        catch
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<CustomerResponseDto>
-            {
-                Status = false,
-                Message = "An unexpected error occurred.",
-                Data = null
-            });
-        }
+        var response = await _customerService.GetByIdAsync(id, cancellationToken);
+        return StatusCode(response.StatusCode, response);
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> Update(
-        int id,
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<APIResponse>> Update(
+        Guid id,
         [FromBody] CustomerUpdateDto request,
         CancellationToken cancellationToken)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var response = await _customerService.UpdateAsync(id, request, cancellationToken);
-            if (!response.Status)
-            {
-                return string.Equals(response.Message, "Customer not found.", StringComparison.Ordinal)
-                    ? NotFound(response)
-                    : BadRequest(response);
-            }
+            var modelErrors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
+                .ToList();
 
-            return Ok(response);
-        }
-        catch
-        {
-            return StatusCode(StatusCodes.Status500InternalServerError, new ApiResponse<CustomerResponseDto>
+            var badRequestResponse = new APIResponse
             {
-                Status = false,
-                Message = "An unexpected error occurred.",
-                Data = null
-            });
+                Success = false,
+                Message = "Validation failed.",
+                Data = null,
+                StatusCode = StatusCodes.Status400BadRequest,
+                Errors = modelErrors
+            };
+
+            return BadRequest(badRequestResponse);
         }
+
+        var response = await _customerService.UpdateAsync(id, request, cancellationToken);
+        return StatusCode(response.StatusCode, response);
     }
 }
