@@ -2,6 +2,7 @@
 using AutoFlow_Backend.Application.DTOs.Auth;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Models;
+using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Background.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -17,15 +18,18 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly JwtSettings _jwtSettings;
+    private readonly IAppDbContext _context;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        IOptions<JwtSettings> jwtOptions)
+        IOptions<JwtSettings> jwtOptions,
+        IAppDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _jwtSettings = jwtOptions.Value;
+        _context = context;
     }
 
     public async Task<ApiResponse<AuthResponse>> RegisterAsync(
@@ -54,6 +58,17 @@ public class AuthService : IAuthService
         }
 
         await _userManager.AddToRoleAsync(user, "Customer");
+        var customer = new Customer
+        {
+            FullName = $"{request.FirstName} {request.LastName}",
+            Email = request.Email,
+            Phone = request.Phone,
+            Address = request.Address,
+            CreatedAt = DateTime.UtcNow,
+            ApplicationUserId = user.Id
+        };
+        await _context.Customers.AddAsync(customer, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
         return Success("Registration successful.", await BuildAuthResponse(user));
     }
 
