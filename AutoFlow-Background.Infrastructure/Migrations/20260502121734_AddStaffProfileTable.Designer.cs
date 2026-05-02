@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AutoFlow_Background.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260430172608_SyncModelChanges")]
-    partial class SyncModelChanges
+    [Migration("20260502121734_AddStaffProfileTable")]
+    partial class AddStaffProfileTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,6 +25,43 @@ namespace AutoFlow_Background.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<TimeOnly>("Time")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Date");
+
+                    b.ToTable("Appointments", (string)null);
+                });
+
             modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -34,6 +71,9 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                     b.Property<string>("Address")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -53,6 +93,8 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -125,6 +167,71 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                     b.HasIndex("VendorId");
 
                     b.ToTable("Parts", (string)null);
+                });
+
+            modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Staff", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StaffCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("StaffCode")
+                        .IsUnique();
+
+                    b.ToTable("Staffs", (string)null);
                 });
 
             modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Vehicle", b =>
@@ -447,6 +554,15 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                     b.Navigation("Vendor");
                 });
 
+            modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Staff", b =>
+                {
+                    b.HasOne("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", null)
+                        .WithOne("StaffProfile")
+                        .HasForeignKey("AutoFlow_Backend.Domain.Entities.Staff", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Vehicle", b =>
                 {
                     b.HasOne("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", null)
@@ -509,6 +625,8 @@ namespace AutoFlow_Background.Infrastructure.Migrations
 
             modelBuilder.Entity("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", b =>
                 {
+                    b.Navigation("StaffProfile");
+
                     b.Navigation("Vehicles");
                 });
 #pragma warning restore 612, 618

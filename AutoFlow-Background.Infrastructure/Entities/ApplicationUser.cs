@@ -12,6 +12,7 @@ namespace AutoFlow_Background.Infrastructure.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
+        public Staff? StaffProfile { get; set; }
         public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
     }
 }

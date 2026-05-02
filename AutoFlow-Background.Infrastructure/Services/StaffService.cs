@@ -1,28 +1,36 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Staff;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Background.Infrastructure.Data;
 using AutoFlow_Background.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Background.Infrastructure.Services;
 
 public class StaffService : IStaffService
 {
     private const string StaffRole = "Staff";
+    private const int StaffCodeMaxLength = 30;
     private const int NameMaxLength = 100;
     private const int EmailMaxLength = 200;
     private const int PhoneMaxLength = 30;
     private const int AddressMaxLength = 300;
+    private const int PositionMaxLength = 100;
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+    private readonly AppDbContext _dbContext;
 
     public StaffService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole<Guid>> roleManager)
+        RoleManager<IdentityRole<Guid>> roleManager,
+        AppDbContext dbContext)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _dbContext = dbContext;
     }
 
     public async Task<ApiResponse<StaffResponse>> CreateAsync(
@@ -34,8 +42,15 @@ public class StaffService : IStaffService
             return FailFromValidation<StaffResponse>(errors);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var existing = await _userManager.FindByEmailAsync(normalizedEmail);
-        if (existing is not null)
+        var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
+        if (existingUser is not null)
+            return Fail<StaffResponse>("Email is already registered.");
+
+        var profileEmailExists = await _dbContext.Staffs
+            .AsNoTracking()
+            .AnyAsync(staff => staff.Email.ToLower() == normalizedEmail, cancellationToken);
+
+        if (profileEmailExists)
             return Fail<StaffResponse>("Email is already registered.");
 
         if (!await _roleManager.RoleExistsAsync(StaffRole))
@@ -52,40 +67,69 @@ public class StaffService : IStaffService
             CreatedAt = DateTime.UtcNow
         };
 
-        var createResult = await _userManager.CreateAsync(user, request.Password);
-        if (!createResult.Succeeded)
-            return Fail<StaffResponse>(string.Join(" ", createResult.Errors.Select(e => e.Description)));
+        var createUserResult = await _userManager.CreateAsync(user, request.Password);
+        if (!createUserResult.Succeeded)
+            return Fail<StaffResponse>(string.Join(" ", createUserResult.Errors.Select(e => e.Description)));
 
-        var roleResult = await _userManager.AddToRoleAsync(user, StaffRole);
-        if (!roleResult.Succeeded)
-            return Fail<StaffResponse>(string.Join(" ", roleResult.Errors.Select(e => e.Description)));
+        var assignRoleResult = await _userManager.AddToRoleAsync(user, StaffRole);
+        if (!assignRoleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            return Fail<StaffResponse>(string.Join(" ", assignRoleResult.Errors.Select(e => e.Description)));
+        }
 
-        return Success("Staff created successfully.", Map(user));
+        var staffCode = await ResolveStaffCodeAsync(request.StaffCode, cancellationToken);
+        if (staffCode is null)
+        {
+            await _userManager.DeleteAsync(user);
+            return Fail<StaffResponse>("Failed to generate a unique staff code.");
+        }
+
+        var staffProfile = new Staff
+        {
+            Id = Guid.NewGuid(),
+            ApplicationUserId = user.Id,
+            StaffCode = staffCode,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Email = normalizedEmail,
+            PhoneNumber = NormalizeOptional(request.Phone),
+            Address = NormalizeOptional(request.Address),
+            Position = NormalizeOptional(request.Position),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Staffs.Add(staffProfile);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Success("Staff created successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var users = await _userManager.GetUsersInRoleAsync(StaffRole);
+        var staffProfiles = await _dbContext.Staffs
+            .AsNoTracking()
+            .OrderBy(staff => staff.FirstName)
+            .ThenBy(staff => staff.LastName)
+            .Select(staff => Map(staff))
+            .ToListAsync(cancellationToken);
 
-        var staff = users
-            .OrderBy(u => u.FirstName)
-            .ThenBy(u => u.LastName)
-            .Select(Map)
-            .ToList();
-
-        return Success("Staff retrieved successfully.", staff);
+        return Success("Staff retrieved successfully.", staffProfiles);
     }
 
     public async Task<ApiResponse<StaffResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user is null)
+        var staffProfile = await _dbContext.Staffs
+            .AsNoTracking()
+            .Where(staff => staff.Id == id)
+            .Select(staff => Map(staff))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (staffProfile is null)
             return Fail<StaffResponse>("Staff not found.");
 
-        if (!await _userManager.IsInRoleAsync(user, StaffRole))
-            return Fail<StaffResponse>("Staff not found.");
-
-        return Success("Staff retrieved successfully.", Map(user));
+        return Success("Staff retrieved successfully.", staffProfile);
     }
 
     public async Task<ApiResponse<StaffResponse>> UpdateAsync(
@@ -97,16 +141,26 @@ public class StaffService : IStaffService
         if (errors.Count > 0)
             return FailFromValidation<StaffResponse>(errors);
 
-        var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user is null)
-            return Fail<StaffResponse>("Staff not found.");
+        var staffProfile = await _dbContext.Staffs
+            .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
 
-        if (!await _userManager.IsInRoleAsync(user, StaffRole))
+        if (staffProfile is null)
             return Fail<StaffResponse>("Staff not found.");
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var existing = await _userManager.FindByEmailAsync(normalizedEmail);
-        if (existing is not null && existing.Id != user.Id)
+        var emailExistsInProfiles = await _dbContext.Staffs
+            .AsNoTracking()
+            .AnyAsync(staff => staff.Id != id && staff.Email.ToLower() == normalizedEmail, cancellationToken);
+
+        if (emailExistsInProfiles)
+            return Fail<StaffResponse>("Email is already registered.");
+
+        var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
+        if (user is null)
+            return Fail<StaffResponse>("Staff account is not available.");
+
+        var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
+        if (existingUser is not null && existingUser.Id != user.Id)
             return Fail<StaffResponse>("Email is already registered.");
 
         user.FirstName = request.FirstName.Trim();
@@ -117,60 +171,109 @@ public class StaffService : IStaffService
         user.UserName = normalizedEmail;
         user.UpdatedAt = DateTime.UtcNow;
 
-        var updateResult = await _userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
-            return Fail<StaffResponse>(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
+        var updateUserResult = await _userManager.UpdateAsync(user);
+        if (!updateUserResult.Succeeded)
+            return Fail<StaffResponse>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
 
-        return Success("Staff updated successfully.", Map(user));
+        staffProfile.FirstName = request.FirstName.Trim();
+        staffProfile.LastName = request.LastName.Trim();
+        staffProfile.Email = normalizedEmail;
+        staffProfile.PhoneNumber = NormalizeOptional(request.Phone);
+        staffProfile.Address = NormalizeOptional(request.Address);
+        staffProfile.Position = NormalizeOptional(request.Position);
+        staffProfile.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Success("Staff updated successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<bool>> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user is null)
+        var staffProfile = await _dbContext.Staffs
+            .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
+
+        if (staffProfile is null)
             return Fail<bool>("Staff not found.");
 
-        if (!await _userManager.IsInRoleAsync(user, StaffRole))
-            return Fail<bool>("Staff not found.");
-
-        if (!IsActive(user))
+        if (!staffProfile.IsActive)
             return Fail<bool>("Staff is already deactivated.");
 
-        user.LockoutEnabled = true;
-        user.LockoutEnd = DateTimeOffset.MaxValue;
-        user.UpdatedAt = DateTime.UtcNow;
+        var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
+        if (user is not null)
+        {
+            user.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            user.UpdatedAt = DateTime.UtcNow;
 
-        var updateResult = await _userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
-            return Fail<bool>(string.Join(" ", updateResult.Errors.Select(e => e.Description)));
+            var updateUserResult = await _userManager.UpdateAsync(user);
+            if (!updateUserResult.Succeeded)
+                return Fail<bool>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
+        }
+
+        staffProfile.IsActive = false;
+        staffProfile.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Success("Staff deactivated successfully.", true);
     }
 
-    private static StaffResponse Map(ApplicationUser user)
+    private async Task<string?> ResolveStaffCodeAsync(string? requestedCode, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedCode))
+        {
+            var normalizedCode = requestedCode.Trim().ToUpperInvariant();
+            var exists = await _dbContext.Staffs
+                .AsNoTracking()
+                .AnyAsync(staff => staff.StaffCode == normalizedCode, cancellationToken);
+
+            return exists ? null : normalizedCode;
+        }
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var generatedCode = $"STF-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
+            var exists = await _dbContext.Staffs
+                .AsNoTracking()
+                .AnyAsync(staff => staff.StaffCode == generatedCode, cancellationToken);
+
+            if (!exists)
+                return generatedCode;
+        }
+
+        return null;
+    }
+
+    private static StaffResponse Map(Staff staff)
     {
         return new StaffResponse
         {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email ?? string.Empty,
-            Phone = user.PhoneNumber,
-            Address = user.Address,
-            IsActive = IsActive(user),
-            CreatedAt = user.CreatedAt,
-            UpdatedAt = user.UpdatedAt
+            Id = staff.Id,
+            ApplicationUserId = staff.ApplicationUserId,
+            StaffCode = staff.StaffCode,
+            FirstName = staff.FirstName,
+            LastName = staff.LastName,
+            Email = staff.Email,
+            Phone = staff.PhoneNumber,
+            Address = staff.Address,
+            Position = staff.Position,
+            IsActive = staff.IsActive,
+            CreatedAt = staff.CreatedAt,
+            UpdatedAt = staff.UpdatedAt
         };
-    }
-
-    private static bool IsActive(ApplicationUser user)
-    {
-        return !user.LockoutEnabled || user.LockoutEnd is null || user.LockoutEnd <= DateTimeOffset.UtcNow;
     }
 
     private static List<string> ValidateForCreate(CreateStaffRequest request)
     {
-        var errors = ValidateCommon(request.FirstName, request.LastName, request.Email, request.Phone, request.Address);
+        var errors = ValidateCommon(
+            request.StaffCode,
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.Phone,
+            request.Address,
+            request.Position);
 
         if (string.IsNullOrWhiteSpace(request.Password))
             errors.Add("Password is required.");
@@ -180,17 +283,29 @@ public class StaffService : IStaffService
 
     private static List<string> ValidateForUpdate(UpdateStaffRequest request)
     {
-        return ValidateCommon(request.FirstName, request.LastName, request.Email, request.Phone, request.Address);
+        return ValidateCommon(
+            null,
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.Phone,
+            request.Address,
+            request.Position);
     }
 
     private static List<string> ValidateCommon(
+        string? staffCode,
         string? firstName,
         string? lastName,
         string? email,
         string? phone,
-        string? address)
+        string? address,
+        string? position)
     {
         var errors = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(staffCode) && staffCode.Trim().Length > StaffCodeMaxLength)
+            errors.Add($"Staff code must be at most {StaffCodeMaxLength} characters.");
 
         if (string.IsNullOrWhiteSpace(firstName))
             errors.Add("First name is required.");
@@ -214,6 +329,9 @@ public class StaffService : IStaffService
 
         if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
             errors.Add($"Address must be at most {AddressMaxLength} characters.");
+
+        if (!string.IsNullOrWhiteSpace(position) && position.Trim().Length > PositionMaxLength)
+            errors.Add($"Position must be at most {PositionMaxLength} characters.");
 
         return errors;
     }

@@ -166,6 +166,71 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                     b.ToTable("Parts", (string)null);
                 });
 
+            modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Staff", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StaffCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("StaffCode")
+                        .IsUnique();
+
+                    b.ToTable("Staffs", (string)null);
+                });
+
             modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Vehicle", b =>
                 {
                     b.Property<Guid>("Id")
@@ -486,6 +551,15 @@ namespace AutoFlow_Background.Infrastructure.Migrations
                     b.Navigation("Vendor");
                 });
 
+            modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Staff", b =>
+                {
+                    b.HasOne("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", null)
+                        .WithOne("StaffProfile")
+                        .HasForeignKey("AutoFlow_Backend.Domain.Entities.Staff", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AutoFlow_Backend.Domain.Entities.Vehicle", b =>
                 {
                     b.HasOne("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", null)
@@ -548,6 +622,8 @@ namespace AutoFlow_Background.Infrastructure.Migrations
 
             modelBuilder.Entity("AutoFlow_Background.Infrastructure.Entities.ApplicationUser", b =>
                 {
+                    b.Navigation("StaffProfile");
+
                     b.Navigation("Vehicles");
                 });
 #pragma warning restore 612, 618

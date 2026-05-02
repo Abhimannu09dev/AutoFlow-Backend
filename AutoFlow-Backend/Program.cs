@@ -60,20 +60,20 @@ builder.Services.AddControllers(options =>
 
     options.InvalidModelStateResponseFactory = context =>
     {
-        var errors = context.ModelState.Values
+        var errorMessages = context.ModelState.Values
             .SelectMany(v => v.Errors)
             .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage)
                 ? "Invalid request."
                 : e.ErrorMessage)
             .ToList();
 
-        var response = new APIResponse
+        var response = new ApiResponse<object?>
         {
-            Success = false,
-            Message = "Validation failed.",
-            Data = null,
-            StatusCode = StatusCodes.Status400BadRequest,
-            Errors = errors
+            Status = false,
+            Message = errorMessages.Count > 0
+                ? string.Join(" ", errorMessages)
+                : "Validation failed.",
+            Data = null
         };
 
         return new BadRequestObjectResult(response);
