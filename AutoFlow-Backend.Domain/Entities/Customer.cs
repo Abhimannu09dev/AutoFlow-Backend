@@ -9,4 +9,5 @@ public class Customer
     public string? Address { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid? ApplicationUserId { get; set; }
+    public ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

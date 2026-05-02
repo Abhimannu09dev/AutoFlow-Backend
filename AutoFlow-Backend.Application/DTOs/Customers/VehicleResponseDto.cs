@@ -1,13 +1,11 @@
-﻿namespace AutoFlow_Backend.Domain.Entities;
+namespace AutoFlow_Backend.Application.DTOs.Customers;
 
-public class Vehicle
+public class VehicleResponseDto
 {
     public int Id { get; set; }
     public Guid CustomerId { get; set; }
     public string VehicleNumber { get; set; } = string.Empty;
     public string? Model { get; set; }
     public string? Brand { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public Customer? Customer { get; set; }
+    public DateTime CreatedAt { get; set; }
 }

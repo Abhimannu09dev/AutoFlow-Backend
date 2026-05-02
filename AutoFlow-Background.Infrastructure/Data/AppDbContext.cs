@@ -34,6 +34,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasIndex(c => c.Email).IsUnique();
             entity.Property(c => c.ApplicationUserId).IsRequired(false);
             entity.HasIndex(c => c.ApplicationUserId);
+            entity.HasMany(c => c.Vehicles)
+                .WithOne(v => v.Customer)
+                .HasForeignKey(v => v.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Vendor>(entity =>
@@ -78,18 +82,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             entity.ToTable("Vehicles");
             entity.HasKey(v => v.Id);
+            entity.Property(v => v.Id).ValueGeneratedOnAdd();
+            entity.Property(v => v.CustomerId).IsRequired();
             entity.Property(v => v.VehicleNumber).IsRequired().HasMaxLength(20);
-            entity.Property(v => v.Brand).IsRequired().HasMaxLength(50);
-            entity.Property(v => v.Model).IsRequired().HasMaxLength(50);
-            entity.Property(v => v.Color).HasMaxLength(30);
-            entity.Property(v => v.VIN).HasMaxLength(50);
+            entity.Property(v => v.Brand).HasMaxLength(50);
+            entity.Property(v => v.Model).HasMaxLength(50);
             entity.Property(v => v.CreatedAt).IsRequired();
-            entity.HasOne<ApplicationUser>()
-                .WithMany(u => u.Vehicles)
-                .HasForeignKey(v => v.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(v => v.VehicleNumber);
-            entity.HasIndex(v => v.UserId);
+            entity.HasIndex(v => v.CustomerId);
         });
 
         modelBuilder.Entity<Appointment>(entity =>

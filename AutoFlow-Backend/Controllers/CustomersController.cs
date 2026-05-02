@@ -94,4 +94,40 @@ public class CustomersController : ControllerBase
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
         return StatusCode(response.StatusCode, response);
     }
+
+    [HttpPost("{id:guid}/vehicles")]
+    public async Task<ActionResult<APIResponse>> AddVehicle(
+        Guid id,
+        [FromBody] VehicleCreateDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            var modelErrors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
+                .ToList();
+
+            var badRequestResponse = new APIResponse
+            {
+                Success = false,
+                Message = "Validation failed.",
+                Data = null,
+                StatusCode = StatusCodes.Status400BadRequest,
+                Errors = modelErrors
+            };
+
+            return BadRequest(badRequestResponse);
+        }
+
+        var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
+        return StatusCode(response.StatusCode, response);
+    }
+
+    [HttpGet("{id:guid}/vehicles")]
+    public async Task<ActionResult<APIResponse>> GetVehicles(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _customerService.GetVehiclesAsync(id, cancellationToken);
+        return StatusCode(response.StatusCode, response);
+    }
 }

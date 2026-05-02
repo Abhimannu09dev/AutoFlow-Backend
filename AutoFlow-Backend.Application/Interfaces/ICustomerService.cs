@@ -9,4 +9,6 @@ public interface ICustomerService
     Task<APIResponse> GetAllAsync(CancellationToken cancellationToken = default);
     Task<APIResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<APIResponse> UpdateAsync(Guid id, CustomerUpdateDto request, CancellationToken cancellationToken = default);
+    Task<APIResponse> AddVehicleAsync(Guid id, VehicleCreateDto request, CancellationToken cancellationToken = default);
+    Task<APIResponse> GetVehiclesAsync(Guid id, CancellationToken cancellationToken = default);
 }

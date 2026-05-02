@@ -12,6 +12,9 @@ public class CustomerService : ICustomerService
     private const int EmailMaxLength = 200;
     private const int PhoneMaxLength = 30;
     private const int AddressMaxLength = 300;
+    private const int VehicleNumberMaxLength = 20;
+    private const int VehicleModelMaxLength = 50;
+    private const int VehicleBrandMaxLength = 50;
 
     private readonly IAppDbContext _dbContext;
 
@@ -137,6 +140,70 @@ public class CustomerService : ICustomerService
         return Success("Customer updated successfully.", Map(customer), 200);
     }
 
+    public async Task<APIResponse> AddVehicleAsync(
+        Guid id,
+        VehicleCreateDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var customerExists = await _dbContext.Customers
+            .AsNoTracking()
+            .AnyAsync(customer => customer.Id == id, cancellationToken);
+
+        if (!customerExists)
+        {
+            return Failure("Customer not found.", 404);
+        }
+
+        var validationErrors = ValidateVehicle(request.VehicleNumber, request.Model, request.Brand);
+        if (validationErrors.Count > 0)
+        {
+            return ValidationFailure(validationErrors);
+        }
+
+        var vehicle = new Vehicle
+        {
+            CustomerId = id,
+            VehicleNumber = request.VehicleNumber.Trim(),
+            Model = NormalizeOptional(request.Model),
+            Brand = NormalizeOptional(request.Brand),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _dbContext.Vehicles.AddAsync(vehicle, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Success("Vehicle added successfully.", Map(vehicle), 201);
+    }
+
+    public async Task<APIResponse> GetVehiclesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var customerExists = await _dbContext.Customers
+            .AsNoTracking()
+            .AnyAsync(customer => customer.Id == id, cancellationToken);
+
+        if (!customerExists)
+        {
+            return Failure("Customer not found.", 404);
+        }
+
+        var vehicles = await _dbContext.Vehicles
+            .AsNoTracking()
+            .Where(vehicle => vehicle.CustomerId == id)
+            .OrderByDescending(vehicle => vehicle.CreatedAt)
+            .Select(vehicle => new VehicleResponseDto
+            {
+                Id = vehicle.Id,
+                CustomerId = vehicle.CustomerId,
+                VehicleNumber = vehicle.VehicleNumber,
+                Model = vehicle.Model,
+                Brand = vehicle.Brand,
+                CreatedAt = vehicle.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Success("Vehicles retrieved successfully.", vehicles, 200);
+    }
+
     private static CustomerResponseDto Map(Customer customer)
     {
         return new CustomerResponseDto
@@ -147,6 +214,19 @@ public class CustomerService : ICustomerService
             Phone = customer.Phone,
             Address = customer.Address,
             CreatedAt = customer.CreatedAt
+        };
+    }
+
+    private static VehicleResponseDto Map(Vehicle vehicle)
+    {
+        return new VehicleResponseDto
+        {
+            Id = vehicle.Id,
+            CustomerId = vehicle.CustomerId,
+            VehicleNumber = vehicle.VehicleNumber,
+            Model = vehicle.Model,
+            Brand = vehicle.Brand,
+            CreatedAt = vehicle.CreatedAt
         };
     }
 
@@ -180,6 +260,32 @@ public class CustomerService : ICustomerService
         if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
         {
             errors.Add($"Address must be at most {AddressMaxLength} characters.");
+        }
+
+        return errors;
+    }
+
+    private static List<string> ValidateVehicle(string? vehicleNumber, string? model, string? brand)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(vehicleNumber))
+        {
+            errors.Add("Vehicle number is required.");
+        }
+        else if (vehicleNumber.Trim().Length > VehicleNumberMaxLength)
+        {
+            errors.Add($"Vehicle number must be at most {VehicleNumberMaxLength} characters.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(model) && model.Trim().Length > VehicleModelMaxLength)
+        {
+            errors.Add($"Model must be at most {VehicleModelMaxLength} characters.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(brand) && brand.Trim().Length > VehicleBrandMaxLength)
+        {
+            errors.Add($"Brand must be at most {VehicleBrandMaxLength} characters.");
         }
 
         return errors;
