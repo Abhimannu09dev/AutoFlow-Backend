@@ -32,6 +32,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.Property(c => c.Address).HasMaxLength(300);
             entity.Property(c => c.CreatedAt).IsRequired();
             entity.HasIndex(c => c.Email).IsUnique();
+            entity.Property(c => c.ApplicationUserId).IsRequired(false);
+            entity.HasIndex(c => c.ApplicationUserId);
         });
 
         modelBuilder.Entity<Vendor>(entity =>
