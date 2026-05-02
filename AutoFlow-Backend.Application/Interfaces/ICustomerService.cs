@@ -5,8 +5,8 @@ namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface ICustomerService
 {
-    Task<APIResponse> CreateAsync(CustomerCreateDto request, CancellationToken cancellationToken = default);
-    Task<APIResponse> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<APIResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<APIResponse> UpdateAsync(Guid id, CustomerUpdateDto request, CancellationToken cancellationToken = default);
+    Task<ApiResponse<CustomerResponseDto>> CreateAsync(CustomerCreateDto request, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApiResponse<CustomerResponseDto>> UpdateAsync(Guid id, CustomerUpdateDto request, CancellationToken cancellationToken = default);
 }

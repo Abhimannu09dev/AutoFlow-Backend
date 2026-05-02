@@ -14,6 +14,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<Part> Parts => Set<Part>();
+    public DbSet<Staff> Staffs => Set<Staff>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
 
@@ -72,6 +73,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasIndex(p => p.PartName);
             entity.HasIndex(p => p.PartNumber);
             entity.HasIndex(p => p.VendorId);
+        });
+
+        modelBuilder.Entity<Staff>(entity =>
+        {
+            entity.ToTable("Staffs");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.StaffCode).IsRequired().HasMaxLength(30);
+            entity.Property(s => s.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.Email).IsRequired().HasMaxLength(200);
+            entity.Property(s => s.PhoneNumber).HasMaxLength(30);
+            entity.Property(s => s.Address).HasMaxLength(300);
+            entity.Property(s => s.Position).HasMaxLength(100);
+            entity.Property(s => s.IsActive).HasDefaultValue(true);
+            entity.Property(s => s.CreatedAt).IsRequired();
+            entity.Property(s => s.UpdatedAt).IsRequired(false);
+            entity.HasIndex(s => s.ApplicationUserId).IsUnique();
+            entity.HasIndex(s => s.StaffCode).IsUnique();
+            entity.HasIndex(s => s.Email);
+            entity.HasOne<ApplicationUser>()
+                .WithOne(user => user.StaffProfile)
+                .HasForeignKey<Staff>(s => s.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Vehicle>(entity =>

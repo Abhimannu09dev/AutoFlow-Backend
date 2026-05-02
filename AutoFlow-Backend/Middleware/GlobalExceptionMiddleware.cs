@@ -28,49 +28,43 @@ public sealed class GlobalExceptionMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, message, errors) = MapException(exception);
+        var (statusCode, message) = MapException(exception);
 
         _logger.LogError(exception, "Unhandled exception. StatusCode: {StatusCode}", statusCode);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = new APIResponse
+        var response = new ApiResponse<object?>
         {
-            Success = false,
+            Status = false,
             Message = message,
-            Data = null,
-            StatusCode = statusCode,
-            Errors = errors
+            Data = null
         };
 
         var payload = JsonSerializer.Serialize(response);
         await context.Response.WriteAsync(payload);
     }
 
-    private static (int StatusCode, string Message, List<string>? Errors) MapException(Exception exception)
+    private static (int StatusCode, string Message) MapException(Exception exception)
     {
         return exception switch
         {
             BadHttpRequestException badRequest => (
                 StatusCodes.Status400BadRequest,
-                string.IsNullOrWhiteSpace(badRequest.Message) ? "Bad request." : badRequest.Message,
-                null),
+                string.IsNullOrWhiteSpace(badRequest.Message) ? "Bad request." : badRequest.Message),
 
             KeyNotFoundException notFound => (
                 StatusCodes.Status404NotFound,
-                string.IsNullOrWhiteSpace(notFound.Message) ? "Resource not found." : notFound.Message,
-                null),
+                string.IsNullOrWhiteSpace(notFound.Message) ? "Resource not found." : notFound.Message),
 
             ArgumentException argumentException => (
                 StatusCodes.Status400BadRequest,
-                string.IsNullOrWhiteSpace(argumentException.Message) ? "Invalid request." : argumentException.Message,
-                null),
+                string.IsNullOrWhiteSpace(argumentException.Message) ? "Invalid request." : argumentException.Message),
 
             _ => (
                 StatusCodes.Status500InternalServerError,
-                "An unexpected error occurred.",
-                null)
+                "An unexpected error occurred.")
         };
     }
 }
