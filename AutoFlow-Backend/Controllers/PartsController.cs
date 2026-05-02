@@ -8,7 +8,7 @@ namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/parts")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Staff")]
 public class PartsController : ControllerBase
 {
     private readonly IPartService _partService;
@@ -19,6 +19,7 @@ public class PartsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ApiResponse<PartResponse>>> Create(
         [FromBody] CreatePartRequest request,
         CancellationToken cancellationToken)
@@ -42,6 +43,7 @@ public class PartsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ApiResponse<PartResponse>>> Update(
         Guid id,
         [FromBody] UpdatePartRequest request,
@@ -52,6 +54,7 @@ public class PartsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _partService.DeleteAsync(id, cancellationToken);
