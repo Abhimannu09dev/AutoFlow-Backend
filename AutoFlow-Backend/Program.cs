@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Models;
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Middleware;
+using AutoFlow_Backend.Filters;
 using AutoFlow_Background.Infrastructure;
 using AutoFlow_Background.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,7 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
     ?? new[] { "http://localhost:3000", "http://127.0.0.1:3000" };
 
 builder.Services.AddCors(options =>
@@ -20,12 +23,13 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontendCors", policy =>
     {
         policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -46,29 +50,43 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services
-    .AddControllers()
-    .ConfigureApiBehaviorOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ApiResponseFilter>();
+})
+.ConfigureApiBehaviorOptions(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+
+    options.InvalidModelStateResponseFactory = context =>
     {
-        options.InvalidModelStateResponseFactory = context =>
+        var errors = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage)
+                ? "Invalid request."
+                : e.ErrorMessage)
+            .ToList();
+
+        var response = new APIResponse
         {
-            var errors = context.ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
-                .ToList();
-
-            var response = new APIResponse
-            {
-                Success = false,
-                Message = "Validation failed.",
-                Data = null,
-                StatusCode = StatusCodes.Status400BadRequest,
-                Errors = errors
-            };
-
-            return new BadRequestObjectResult(response);
+            Success = false,
+            Message = "Validation failed.",
+            Data = null,
+            StatusCode = StatusCodes.Status400BadRequest,
+            Errors = errors
         };
-    });
+
+        return new BadRequestObjectResult(response);
+    };
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(
+        new System.Text.Json.Serialization.JsonStringEnumConverter());
+    options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+    options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+});
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
@@ -89,7 +107,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("FrontendCors");
-app.UseAuthentication(); // ← before UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

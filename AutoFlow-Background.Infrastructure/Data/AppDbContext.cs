@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<Part> Parts => Set<Part>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +88,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(v => v.VehicleNumber);
             entity.HasIndex(v => v.UserId);
+        });
+
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.ToTable("Appointments");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.CustomerId).IsRequired();
+            entity.Property(a => a.Date).IsRequired();
+            entity.Property(a => a.Time).IsRequired();
+            entity.Property(a => a.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(a => a.CreatedAt).IsRequired();
+            entity.HasIndex(a => a.CustomerId);
+            entity.HasIndex(a => a.Date);
         });
     }
 }
