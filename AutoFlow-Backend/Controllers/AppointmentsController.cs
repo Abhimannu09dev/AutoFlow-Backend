@@ -22,10 +22,7 @@ public class AppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _appointmentService.CreateAsync(request, cancellationToken);
-        if (!response.Status)
-            return BadRequest(response);
-
-        return CreatedAtAction(nameof(GetById), new { id = response.Data!.Id }, response);
+        return Ok(response);
     }
 
     [HttpGet]
@@ -42,9 +39,6 @@ public class AppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _appointmentService.GetByIdAsync(id, cancellationToken);
-        if (!response.Status)
-            return NotFound(response);
-
         return Ok(response);
     }
 }

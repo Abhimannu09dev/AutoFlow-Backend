@@ -24,17 +24,7 @@ public class PartsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _partService.CreateAsync(request, cancellationToken);
-        if (!response.Status)
-        {
-            if (string.Equals(response.Message, "Vendor not found.", StringComparison.Ordinal))
-            {
-                return NotFound(response);
-            }
-
-            return BadRequest(response);
-        }
-
-        return CreatedAtAction(nameof(GetById), new { id = response.Data!.Id }, response);
+        return Ok(response);
     }
 
     [HttpGet]
@@ -48,11 +38,6 @@ public class PartsController : ControllerBase
     public async Task<ActionResult<ApiResponse<PartResponse>>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var response = await _partService.GetByIdAsync(id, cancellationToken);
-        if (!response.Status)
-        {
-            return NotFound(response);
-        }
-
         return Ok(response);
     }
 
@@ -63,21 +48,6 @@ public class PartsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _partService.UpdateAsync(id, request, cancellationToken);
-        if (!response.Status)
-        {
-            if (string.Equals(response.Message, "Part not found.", StringComparison.Ordinal))
-            {
-                return NotFound(response);
-            }
-
-            if (string.Equals(response.Message, "Vendor not found.", StringComparison.Ordinal))
-            {
-                return NotFound(response);
-            }
-
-            return BadRequest(response);
-        }
-
         return Ok(response);
     }
 
@@ -85,11 +55,6 @@ public class PartsController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _partService.DeleteAsync(id, cancellationToken);
-        if (!response.Status)
-        {
-            return NotFound(response);
-        }
-
         return Ok(response);
     }
 
