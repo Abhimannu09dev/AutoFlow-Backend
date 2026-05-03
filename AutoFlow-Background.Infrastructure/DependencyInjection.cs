@@ -1,8 +1,10 @@
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Application.Models;
 using AutoFlow_Backend.Application.Services;
 using AutoFlow_Background.Infrastructure.Data;
 using AutoFlow_Background.Infrastructure.Entities;
+using AutoFlow_Background.Infrastructure.Repositories;
 using AutoFlow_Background.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +41,9 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<IVendorRepository, VendorRepository>();
+        services.AddScoped<IPartRepository, PartRepository>();
+        services.AddScoped<IStaffRepository, StaffRepository>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IPartService, PartService>();

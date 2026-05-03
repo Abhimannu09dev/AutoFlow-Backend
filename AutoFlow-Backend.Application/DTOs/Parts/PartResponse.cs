@@ -1,3 +1,5 @@
+using AutoFlow_Backend.Domain.Enums;
+
 namespace AutoFlow_Backend.Application.DTOs.Parts;
 
 public class PartResponse
@@ -12,6 +14,7 @@ public class PartResponse
     public decimal SellingPrice { get; set; }
     public int StockQuantity { get; set; }
     public int MinimumStockLevel { get; set; }
+    public StockStatus StockStatus { get; set; }
     public Guid? VendorId { get; set; }
     public string? VendorName { get; set; }
     public bool IsActive { get; set; }
