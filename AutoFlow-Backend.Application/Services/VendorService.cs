@@ -1,8 +1,8 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vendors;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -14,11 +14,11 @@ public class VendorService : IVendorService
     private const int EmailMaxLength = 200;
     private const int AddressMaxLength = 300;
 
-    private readonly IAppDbContext _dbContext;
+    private readonly IVendorRepository _vendorRepository;
 
-    public VendorService(IAppDbContext dbContext)
+    public VendorService(IVendorRepository vendorRepository)
     {
-        _dbContext = dbContext;
+        _vendorRepository = vendorRepository;
     }
 
     public async Task<ApiResponse<VendorResponse>> CreateAsync(
@@ -32,9 +32,7 @@ public class VendorService : IVendorService
         }
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
-        var duplicateExists = await _dbContext.Vendors
-            .AsNoTracking()
-            .AnyAsync(v => v.IsActive && v.VendorName.ToLower() == normalizedName, cancellationToken);
+        var duplicateExists = await _vendorRepository.ExistsActiveByNameAsync(normalizedName, null, cancellationToken);
 
         if (duplicateExists)
         {
@@ -53,38 +51,28 @@ public class VendorService : IVendorService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Vendors.AddAsync(vendor, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _vendorRepository.AddAsync(vendor, cancellationToken);
+        await _vendorRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Vendor created successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<List<VendorResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var vendors = await _dbContext.Vendors
-            .AsNoTracking()
-            .Where(v => v.IsActive)
-            .OrderBy(v => v.VendorName)
-            .Select(v => Map(v))
-            .ToListAsync(cancellationToken);
-
-        return Success("Vendors retrieved successfully.", vendors);
+        var vendors = await _vendorRepository.GetActiveAsync(cancellationToken);
+        return Success("Vendors retrieved successfully.", vendors.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<VendorResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var vendor = await _dbContext.Vendors
-            .AsNoTracking()
-            .Where(v => v.IsActive && v.Id == id)
-            .Select(v => Map(v))
-            .FirstOrDefaultAsync(cancellationToken);
+        var vendor = await _vendorRepository.GetActiveByIdAsync(id, cancellationToken);
 
         if (vendor is null)
         {
             return Fail<VendorResponse>("Vendor not found.");
         }
 
-        return Success("Vendor retrieved successfully.", vendor);
+        return Success("Vendor retrieved successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<VendorResponse>> UpdateAsync(
@@ -98,8 +86,7 @@ public class VendorService : IVendorService
             return FailFromValidation<VendorResponse>(errors);
         }
 
-        var vendor = await _dbContext.Vendors
-            .FirstOrDefaultAsync(v => v.IsActive && v.Id == id, cancellationToken);
+        var vendor = await _vendorRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
 
         if (vendor is null)
         {
@@ -107,9 +94,7 @@ public class VendorService : IVendorService
         }
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
-        var duplicateExists = await _dbContext.Vendors
-            .AsNoTracking()
-            .AnyAsync(v => v.IsActive && v.Id != id && v.VendorName.ToLower() == normalizedName, cancellationToken);
+        var duplicateExists = await _vendorRepository.ExistsActiveByNameAsync(normalizedName, id, cancellationToken);
 
         if (duplicateExists)
         {
@@ -123,15 +108,15 @@ public class VendorService : IVendorService
         vendor.Address = NormalizeOptional(request.Address);
         vendor.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _vendorRepository.Update(vendor);
+        await _vendorRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Vendor updated successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var vendor = await _dbContext.Vendors
-            .FirstOrDefaultAsync(v => v.IsActive && v.Id == id, cancellationToken);
+        var vendor = await _vendorRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
 
         if (vendor is null)
         {
@@ -141,7 +126,8 @@ public class VendorService : IVendorService
         vendor.IsActive = false;
         vendor.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _vendorRepository.Update(vendor);
+        await _vendorRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Vendor deleted successfully.", true);
     }
@@ -150,27 +136,8 @@ public class VendorService : IVendorService
         string? query,
         CancellationToken cancellationToken = default)
     {
-        var normalizedQuery = query?.Trim();
-        var vendorQuery = _dbContext.Vendors
-            .AsNoTracking()
-            .Where(v => v.IsActive);
-
-        if (!string.IsNullOrWhiteSpace(normalizedQuery))
-        {
-            var lowered = normalizedQuery.ToLowerInvariant();
-            vendorQuery = vendorQuery.Where(v =>
-                v.VendorName.ToLower().Contains(lowered) ||
-                v.Phone.ToLower().Contains(lowered) ||
-                (v.ContactPerson != null && v.ContactPerson.ToLower().Contains(lowered)) ||
-                (v.Email != null && v.Email.ToLower().Contains(lowered)));
-        }
-
-        var results = await vendorQuery
-            .OrderBy(v => v.VendorName)
-            .Select(v => Map(v))
-            .ToListAsync(cancellationToken);
-
-        return Success("Vendors retrieved successfully.", results);
+        var vendors = await _vendorRepository.SearchActiveAsync(query, cancellationToken);
+        return Success("Vendors retrieved successfully.", vendors.Select(Map).ToList());
     }
 
     private static VendorResponse Map(Vendor vendor)

@@ -1,11 +1,10 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Staff;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using AutoFlow_Background.Infrastructure.Data;
 using AutoFlow_Background.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Background.Infrastructure.Services;
 
@@ -21,16 +20,16 @@ public class StaffService : IStaffService
 
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-    private readonly AppDbContext _dbContext;
+    private readonly IStaffRepository _staffRepository;
 
     public StaffService(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole<Guid>> roleManager,
-        AppDbContext dbContext)
+        IStaffRepository staffRepository)
     {
         _userManager = userManager;
         _roleManager = roleManager;
-        _dbContext = dbContext;
+        _staffRepository = staffRepository;
     }
 
     public async Task<ApiResponse<StaffResponse>> CreateAsync(
@@ -46,10 +45,7 @@ public class StaffService : IStaffService
         if (existingUser is not null)
             return Fail<StaffResponse>("Email is already registered.");
 
-        var profileEmailExists = await _dbContext.Staffs
-            .AsNoTracking()
-            .AnyAsync(staff => staff.Email.ToLower() == normalizedEmail, cancellationToken);
-
+        var profileEmailExists = await _staffRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
         if (profileEmailExists)
             return Fail<StaffResponse>("Email is already registered.");
 
@@ -100,36 +96,26 @@ public class StaffService : IStaffService
             CreatedAt = DateTime.UtcNow
         };
 
-        _dbContext.Staffs.Add(staffProfile);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _staffRepository.AddAsync(staffProfile, cancellationToken);
+        await _staffRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Staff created successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var staffProfiles = await _dbContext.Staffs
-            .AsNoTracking()
-            .OrderBy(staff => staff.FirstName)
-            .ThenBy(staff => staff.LastName)
-            .Select(staff => Map(staff))
-            .ToListAsync(cancellationToken);
-
-        return Success("Staff retrieved successfully.", staffProfiles);
+        var staffProfiles = await _staffRepository.GetAllAsync(cancellationToken);
+        return Success("Staff retrieved successfully.", staffProfiles.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<StaffResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var staffProfile = await _dbContext.Staffs
-            .AsNoTracking()
-            .Where(staff => staff.Id == id)
-            .Select(staff => Map(staff))
-            .FirstOrDefaultAsync(cancellationToken);
+        var staffProfile = await _staffRepository.GetByIdAsync(id, cancellationToken);
 
         if (staffProfile is null)
             return Fail<StaffResponse>("Staff not found.");
 
-        return Success("Staff retrieved successfully.", staffProfile);
+        return Success("Staff retrieved successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<StaffResponse>> UpdateAsync(
@@ -141,16 +127,13 @@ public class StaffService : IStaffService
         if (errors.Count > 0)
             return FailFromValidation<StaffResponse>(errors);
 
-        var staffProfile = await _dbContext.Staffs
-            .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
+        var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
 
         if (staffProfile is null)
             return Fail<StaffResponse>("Staff not found.");
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var emailExistsInProfiles = await _dbContext.Staffs
-            .AsNoTracking()
-            .AnyAsync(staff => staff.Id != id && staff.Email.ToLower() == normalizedEmail, cancellationToken);
+        var emailExistsInProfiles = await _staffRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
 
         if (emailExistsInProfiles)
             return Fail<StaffResponse>("Email is already registered.");
@@ -183,15 +166,15 @@ public class StaffService : IStaffService
         staffProfile.Position = NormalizeOptional(request.Position);
         staffProfile.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _staffRepository.Update(staffProfile);
+        await _staffRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Staff updated successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<bool>> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var staffProfile = await _dbContext.Staffs
-            .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
+        var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
 
         if (staffProfile is null)
             return Fail<bool>("Staff not found.");
@@ -214,7 +197,8 @@ public class StaffService : IStaffService
         staffProfile.IsActive = false;
         staffProfile.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _staffRepository.Update(staffProfile);
+        await _staffRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Staff deactivated successfully.", true);
     }
@@ -224,19 +208,14 @@ public class StaffService : IStaffService
         if (!string.IsNullOrWhiteSpace(requestedCode))
         {
             var normalizedCode = requestedCode.Trim().ToUpperInvariant();
-            var exists = await _dbContext.Staffs
-                .AsNoTracking()
-                .AnyAsync(staff => staff.StaffCode == normalizedCode, cancellationToken);
-
+            var exists = await _staffRepository.StaffCodeExistsAsync(normalizedCode, cancellationToken);
             return exists ? null : normalizedCode;
         }
 
         for (var attempt = 0; attempt < 10; attempt++)
         {
             var generatedCode = $"STF-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
-            var exists = await _dbContext.Staffs
-                .AsNoTracking()
-                .AnyAsync(staff => staff.StaffCode == generatedCode, cancellationToken);
+            var exists = await _staffRepository.StaffCodeExistsAsync(generatedCode, cancellationToken);
 
             if (!exists)
                 return generatedCode;

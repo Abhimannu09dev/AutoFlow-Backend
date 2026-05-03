@@ -1,8 +1,9 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Parts;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+using AutoFlow_Backend.Domain.Enums;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -15,11 +16,11 @@ public class PartService : IPartService
     private const int DescriptionMaxLength = 500;
     private const int DefaultMinimumStockLevel = 10;
 
-    private readonly IAppDbContext _dbContext;
+    private readonly IPartRepository _partRepository;
 
-    public PartService(IAppDbContext dbContext)
+    public PartService(IPartRepository partRepository)
     {
-        _dbContext = dbContext;
+        _partRepository = partRepository;
     }
 
     public async Task<ApiResponse<PartResponse>> CreateAsync(
@@ -44,9 +45,7 @@ public class PartService : IPartService
         }
 
         var normalizedPartNumber = request.PartNumber!.Trim().ToLowerInvariant();
-        var duplicateExists = await _dbContext.Parts
-            .AsNoTracking()
-            .AnyAsync(p => p.IsActive && p.PartNumber.ToLower() == normalizedPartNumber, cancellationToken);
+        var duplicateExists = await _partRepository.ExistsActiveByPartNumberAsync(normalizedPartNumber, null, cancellationToken);
 
         if (duplicateExists)
         {
@@ -56,18 +55,11 @@ public class PartService : IPartService
         string? vendorName = null;
         if (request.VendorId.HasValue)
         {
-            var vendor = await _dbContext.Vendors
-                .AsNoTracking()
-                .Where(v => v.IsActive && v.Id == request.VendorId.Value)
-                .Select(v => new { v.Id, v.VendorName })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (vendor is null)
+            vendorName = await _partRepository.GetActiveVendorNameByIdAsync(request.VendorId.Value, cancellationToken);
+            if (vendorName is null)
             {
                 return Fail<PartResponse>("Vendor not found.");
             }
-
-            vendorName = vendor.VendorName;
         }
 
         var part = new Part
@@ -87,40 +79,28 @@ public class PartService : IPartService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Parts.AddAsync(part, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _partRepository.AddAsync(part, cancellationToken);
+        await _partRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Part created successfully.", Map(part, vendorName));
     }
 
     public async Task<ApiResponse<List<PartResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var parts = await _dbContext.Parts
-            .AsNoTracking()
-            .Include(p => p.Vendor)
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.PartName)
-            .Select(p => Map(p, p.Vendor != null && p.Vendor.IsActive ? p.Vendor.VendorName : null))
-            .ToListAsync(cancellationToken);
-
-        return Success("Parts retrieved successfully.", parts);
+        var parts = await _partRepository.GetActiveAsync(cancellationToken);
+        return Success("Parts retrieved successfully.", parts.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<PartResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var part = await _dbContext.Parts
-            .AsNoTracking()
-            .Include(p => p.Vendor)
-            .Where(p => p.IsActive && p.Id == id)
-            .Select(p => Map(p, p.Vendor != null && p.Vendor.IsActive ? p.Vendor.VendorName : null))
-            .FirstOrDefaultAsync(cancellationToken);
+        var part = await _partRepository.GetActiveByIdAsync(id, cancellationToken);
 
         if (part is null)
         {
             return Fail<PartResponse>("Part not found.");
         }
 
-        return Success("Part retrieved successfully.", part);
+        return Success("Part retrieved successfully.", Map(part));
     }
 
     public async Task<ApiResponse<PartResponse>> UpdateAsync(
@@ -145,18 +125,14 @@ public class PartService : IPartService
             return FailFromValidation<PartResponse>(errors);
         }
 
-        var part = await _dbContext.Parts
-            .FirstOrDefaultAsync(p => p.IsActive && p.Id == id, cancellationToken);
-
+        var part = await _partRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
         if (part is null)
         {
             return Fail<PartResponse>("Part not found.");
         }
 
         var normalizedPartNumber = request.PartNumber!.Trim().ToLowerInvariant();
-        var duplicateExists = await _dbContext.Parts
-            .AsNoTracking()
-            .AnyAsync(p => p.IsActive && p.Id != id && p.PartNumber.ToLower() == normalizedPartNumber, cancellationToken);
+        var duplicateExists = await _partRepository.ExistsActiveByPartNumberAsync(normalizedPartNumber, id, cancellationToken);
 
         if (duplicateExists)
         {
@@ -166,18 +142,11 @@ public class PartService : IPartService
         string? vendorName = null;
         if (request.VendorId.HasValue)
         {
-            var vendor = await _dbContext.Vendors
-                .AsNoTracking()
-                .Where(v => v.IsActive && v.Id == request.VendorId.Value)
-                .Select(v => new { v.Id, v.VendorName })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (vendor is null)
+            vendorName = await _partRepository.GetActiveVendorNameByIdAsync(request.VendorId.Value, cancellationToken);
+            if (vendorName is null)
             {
                 return Fail<PartResponse>("Vendor not found.");
             }
-
-            vendorName = vendor.VendorName;
         }
 
         part.PartName = request.PartName!.Trim();
@@ -192,15 +161,15 @@ public class PartService : IPartService
         part.VendorId = request.VendorId;
         part.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _partRepository.Update(part);
+        await _partRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Part updated successfully.", Map(part, vendorName));
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var part = await _dbContext.Parts
-            .FirstOrDefaultAsync(p => p.IsActive && p.Id == id, cancellationToken);
+        var part = await _partRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
 
         if (part is null)
         {
@@ -210,7 +179,8 @@ public class PartService : IPartService
         part.IsActive = false;
         part.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _partRepository.Update(part);
+        await _partRepository.SaveChangesAsync(cancellationToken);
 
         return Success("Part deleted successfully.", true);
     }
@@ -219,42 +189,20 @@ public class PartService : IPartService
         string? query,
         CancellationToken cancellationToken = default)
     {
-        var normalizedQuery = query?.Trim();
-        var partQuery = _dbContext.Parts
-            .AsNoTracking()
-            .Include(p => p.Vendor)
-            .Where(p => p.IsActive);
-
-        if (!string.IsNullOrWhiteSpace(normalizedQuery))
-        {
-            var lowered = normalizedQuery.ToLowerInvariant();
-            partQuery = partQuery.Where(p =>
-                p.PartName.ToLower().Contains(lowered) ||
-                p.PartNumber.ToLower().Contains(lowered) ||
-                (p.Brand != null && p.Brand.ToLower().Contains(lowered)) ||
-                (p.Category != null && p.Category.ToLower().Contains(lowered)));
-        }
-
-        var results = await partQuery
-            .OrderBy(p => p.PartName)
-            .Select(p => Map(p, p.Vendor != null && p.Vendor.IsActive ? p.Vendor.VendorName : null))
-            .ToListAsync(cancellationToken);
-
-        return Success("Parts retrieved successfully.", results);
+        var parts = await _partRepository.SearchActiveAsync(query, cancellationToken);
+        return Success("Parts retrieved successfully.", parts.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<List<PartResponse>>> GetLowStockAsync(CancellationToken cancellationToken = default)
     {
-        var parts = await _dbContext.Parts
-            .AsNoTracking()
-            .Include(p => p.Vendor)
-            .Where(p => p.IsActive && p.StockQuantity < p.MinimumStockLevel)
-            .OrderBy(p => p.StockQuantity)
-            .ThenBy(p => p.PartName)
-            .Select(p => Map(p, p.Vendor != null && p.Vendor.IsActive ? p.Vendor.VendorName : null))
-            .ToListAsync(cancellationToken);
+        var parts = await _partRepository.GetLowStockActiveAsync(cancellationToken);
+        return Success("Low-stock parts retrieved successfully.", parts.Select(Map).ToList());
+    }
 
-        return Success("Low-stock parts retrieved successfully.", parts);
+    private static PartResponse Map(Part part)
+    {
+        var vendorName = part.Vendor is { IsActive: true } ? part.Vendor.VendorName : null;
+        return Map(part, vendorName);
     }
 
     private static PartResponse Map(Part part, string? vendorName)
@@ -271,6 +219,7 @@ public class PartService : IPartService
             SellingPrice = part.SellingPrice,
             StockQuantity = part.StockQuantity,
             MinimumStockLevel = part.MinimumStockLevel,
+            StockStatus = GetStockStatus(part.StockQuantity, part.MinimumStockLevel),
             VendorId = part.VendorId,
             VendorName = vendorName,
             IsActive = part.IsActive,
@@ -363,6 +312,21 @@ public class PartService : IPartService
         }
 
         return value.Trim();
+    }
+
+    private static StockStatus GetStockStatus(int stockQuantity, int minimumStockLevel)
+    {
+        if (stockQuantity <= 0)
+        {
+            return StockStatus.OutOfStock;
+        }
+
+        if (stockQuantity < minimumStockLevel)
+        {
+            return StockStatus.LowStock;
+        }
+
+        return StockStatus.InStock;
     }
 
     private static ApiResponse<T> Success<T>(string message, T data)
