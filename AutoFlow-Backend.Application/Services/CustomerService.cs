@@ -162,6 +162,7 @@ public class CustomerService : ICustomerService
 
         var vehicle = new Vehicle
         {
+            Id = Guid.NewGuid(),
             CustomerId = id,
             VehicleNumber = request.VehicleNumber.Trim(),
             Model = NormalizeOptional(request.Model),
@@ -202,6 +203,22 @@ public class CustomerService : ICustomerService
             .ToListAsync(cancellationToken);
 
         return Success("Vehicles retrieved successfully.", vehicles, 200);
+    }
+
+    public async Task<APIResponse> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var customer = await _dbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
+        if (customer is null)
+        {
+            return Failure("Customer not found.", 404);
+        }
+
+        _dbContext.Customers.Remove(customer);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Success("Customer deleted successfully.", true, 200);
     }
 
     private static CustomerResponseDto Map(Customer customer)

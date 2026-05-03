@@ -2,7 +2,7 @@
 
 public class Vehicle
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     public Guid CustomerId { get; set; }
     public string VehicleNumber { get; set; } = string.Empty;
     public string? Model { get; set; }

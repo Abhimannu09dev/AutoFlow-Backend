@@ -16,6 +16,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Part> Parts => Set<Part>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<Staff> Staffs => Set<Staff>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +104,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.Property(a => a.CreatedAt).IsRequired();
             entity.HasIndex(a => a.CustomerId);
             entity.HasIndex(a => a.Date);
+        });
+
+        modelBuilder.Entity<Staff>(entity =>
+        {
+            entity.ToTable("Staffs");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Id).ValueGeneratedOnAdd();
+            entity.Property(s => s.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(s => s.Role).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.Email).HasMaxLength(200);
+            entity.Property(s => s.Phone).HasMaxLength(30);
+            entity.Property(s => s.CreatedAt).IsRequired();
+            entity.HasIndex(s => s.Email).IsUnique(false);
         });
     }
 }

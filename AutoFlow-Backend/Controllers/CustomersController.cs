@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Customers;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace AutoFlow_Backend.Controllers;
 
@@ -21,33 +22,20 @@ public class CustomersController : ControllerBase
         [FromBody] CustomerCreateDto request,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            var modelErrors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
-                .ToList();
-
-            var badRequestResponse = new APIResponse
-            {
-                Success = false,
-                Message = "Validation failed.",
-                Data = null,
-                StatusCode = StatusCodes.Status400BadRequest,
-                Errors = modelErrors
-            };
-
-            return BadRequest(badRequestResponse);
-        }
-
+        // Model state validation handled globally via InvalidModelStateResponseFactory
         var response = await _customerService.CreateAsync(request, cancellationToken);
         if (!response.Success)
         {
-            return BadRequest(response);
+            return StatusCode(response.StatusCode, response);
         }
 
         var createdCustomer = response.Data as CustomerResponseDto;
-        return CreatedAtAction(nameof(GetById), new { id = createdCustomer?.Id }, response);
+        if (response.StatusCode == StatusCodes.Status201Created)
+        {
+            return CreatedAtAction(nameof(GetById), new { id = createdCustomer?.Id }, response);
+        }
+
+        return StatusCode(response.StatusCode, response);
     }
 
     [HttpGet]
@@ -72,25 +60,7 @@ public class CustomersController : ControllerBase
         [FromBody] CustomerUpdateDto request,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            var modelErrors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
-                .ToList();
-
-            var badRequestResponse = new APIResponse
-            {
-                Success = false,
-                Message = "Validation failed.",
-                Data = null,
-                StatusCode = StatusCodes.Status400BadRequest,
-                Errors = modelErrors
-            };
-
-            return BadRequest(badRequestResponse);
-        }
-
+        // Model state validation handled globally via InvalidModelStateResponseFactory
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
         return StatusCode(response.StatusCode, response);
     }
@@ -101,25 +71,7 @@ public class CustomersController : ControllerBase
         [FromBody] VehicleCreateDto request,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            var modelErrors = ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
-                .ToList();
-
-            var badRequestResponse = new APIResponse
-            {
-                Success = false,
-                Message = "Validation failed.",
-                Data = null,
-                StatusCode = StatusCodes.Status400BadRequest,
-                Errors = modelErrors
-            };
-
-            return BadRequest(badRequestResponse);
-        }
-
+        // Model state validation handled globally via InvalidModelStateResponseFactory
         var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
         return StatusCode(response.StatusCode, response);
     }

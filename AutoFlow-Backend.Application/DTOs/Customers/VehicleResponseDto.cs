@@ -2,7 +2,7 @@ namespace AutoFlow_Backend.Application.DTOs.Customers;
 
 public class VehicleResponseDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
     public string VehicleNumber { get; set; } = string.Empty;
     public string? Model { get; set; }
