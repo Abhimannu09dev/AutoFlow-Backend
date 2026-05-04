@@ -19,6 +19,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItems> SaleItems => Set<SaleItems>();
+    public DbSet<PartRequest> PartRequests => Set<PartRequest>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -166,6 +168,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                   .WithMany()
                   .HasForeignKey(si => si.PartId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PartRequest>(entity =>
+        {
+            entity.ToTable("PartRequests");
+            entity.HasKey(pr => pr.Id);
+            entity.Property(pr => pr.CustomerId).IsRequired();
+            entity.Property(pr => pr.PartName).IsRequired().HasMaxLength(150);
+            entity.Property(pr => pr.Quantity).IsRequired();
+            entity.Property(pr => pr.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(pr => pr.CreatedAt).IsRequired();
+            entity.HasIndex(pr => pr.CustomerId);
+        });
+
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.ToTable("Reviews");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.CustomerId).IsRequired();
+            entity.Property(r => r.Rating).IsRequired();
+            entity.Property(r => r.Comment).HasMaxLength(1000);
+            entity.Property(r => r.CreatedAt).IsRequired();
+            entity.HasIndex(r => r.CustomerId);
         });
     }
 }
