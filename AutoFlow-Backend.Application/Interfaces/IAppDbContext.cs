@@ -10,6 +10,5 @@ public interface IAppDbContext
     DbSet<Part> Parts { get; }
     DbSet<Vehicle> Vehicles { get; }
     DbSet<Appointment> Appointments { get; }
-    DbSet<Staff> Staffs { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
