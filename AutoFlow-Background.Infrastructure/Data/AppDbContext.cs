@@ -21,6 +21,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<SaleItems> SaleItems => Set<SaleItems>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
+    public DbSet<PurchaseInvoiceItem> PurchaseInvoiceItems => Set<PurchaseInvoiceItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -191,6 +193,40 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.Property(r => r.Comment).HasMaxLength(1000);
             entity.Property(r => r.CreatedAt).IsRequired();
             entity.HasIndex(r => r.CustomerId);
+        });
+
+        modelBuilder.Entity<PurchaseInvoice>(entity =>
+        {
+            entity.ToTable("PurchaseInvoices");
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Id).ValueGeneratedOnAdd();
+            entity.Property(p => p.TotalAmount).HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(p => p.Notes).HasMaxLength(500);
+            entity.Property(p => p.InvoiceDate).IsRequired();
+            entity.Property(p => p.CreatedAt).IsRequired();
+            entity.HasOne(p => p.Vendor)
+                  .WithMany()
+                  .HasForeignKey(p => p.VendorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(p => p.Items)
+                  .WithOne(i => i.PurchaseInvoice)
+                  .HasForeignKey(i => i.PurchaseInvoiceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PurchaseInvoiceItem>(entity =>
+        {
+            entity.ToTable("PurchaseInvoiceItems");
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Id).ValueGeneratedOnAdd();
+            entity.Property(i => i.UnitCost).HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(i => i.SubTotal).HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(i => i.Quantity).IsRequired();
+            entity.HasOne(i => i.Part)
+                  .WithMany()
+                  .HasForeignKey(i => i.PartId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
