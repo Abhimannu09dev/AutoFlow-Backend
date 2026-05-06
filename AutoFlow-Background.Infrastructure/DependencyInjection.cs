@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IFinancialReportService, FinancialReportService>();
 
         return services;
     }
