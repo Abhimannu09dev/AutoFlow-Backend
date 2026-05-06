@@ -1,7 +1,10 @@
 using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.DTOs.Customers;
+using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
@@ -64,6 +67,54 @@ public class CustomerService : ICustomerService
             .ToListAsync(cancellationToken);
 
         return Success("Customers retrieved successfully.", customers);
+    }
+
+    public async Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var customerExists = await _dbContext.Customers
+            .AsNoTracking()
+            .AnyAsync(customer => customer.Id == customerId, cancellationToken);
+
+        if (!customerExists)
+        {
+            return Failure<List<SaleResponse>>("Customer not found.");
+        }
+
+        var purchases = await _dbContext.Sales
+            .AsNoTracking()
+            .Where(sale => sale.CustomerId == customerId)
+            .OrderByDescending(sale => sale.SaleDate)
+            .ThenByDescending(sale => sale.CreatedAt)
+            .Select(sale => MapSale(sale))
+            .ToListAsync(cancellationToken);
+
+        return Success("Customer purchases retrieved successfully.", purchases);
+    }
+
+    public async Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var customerExists = await _dbContext.Customers
+            .AsNoTracking()
+            .AnyAsync(customer => customer.Id == customerId, cancellationToken);
+
+        if (!customerExists)
+        {
+            return Failure<List<AppointmentResponse>>("Customer not found.");
+        }
+
+        var services = await _dbContext.Appointments
+            .AsNoTracking()
+            .Where(appointment => appointment.CustomerId == customerId)
+            .OrderByDescending(appointment => appointment.Date)
+            .ThenByDescending(appointment => appointment.Time)
+            .Select(appointment => MapAppointment(appointment))
+            .ToListAsync(cancellationToken);
+
+        return Success("Customer services retrieved successfully.", services);
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -131,6 +182,49 @@ public class CustomerService : ICustomerService
             Phone = customer.Phone,
             Address = customer.Address,
             CreatedAt = customer.CreatedAt
+        };
+    }
+
+    private static SaleResponse MapSale(Sale sale)
+    {
+        return new SaleResponse
+        {
+            Id = sale.Id,
+            CustomerId = sale.CustomerId,
+            CustomerName = sale.Customer?.FullName ?? string.Empty,
+            StaffId = sale.StaffId,
+            SaleDate = sale.SaleDate,
+            SubTotal = sale.SubTotal,
+            DiscountAmount = sale.DiscountAmount,
+            TotalAmount = sale.TotalAmount,
+            LoyaltyDiscountApplied = sale.DiscountAmount > 0,
+            PaymentMethod = sale.PaymentMethod,
+            Status = sale.Status,
+            Notes = sale.Notes,
+            CreatedAt = sale.CreatedAt,
+            Items = sale.SaleItems.Select(item => new SaleItemResponse
+            {
+                Id = item.Id,
+                PartId = item.PartId,
+                PartName = item.Part?.PartName ?? string.Empty,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                SubTotal = item.SubTotal
+            }).ToList()
+        };
+    }
+
+    private static AppointmentResponse MapAppointment(Appointment appointment)
+    {
+        return new AppointmentResponse
+        {
+            Id = appointment.Id,
+            CustomerId = appointment.CustomerId,
+            Date = appointment.Date,
+            Time = appointment.Time,
+            Status = appointment.Status,
+            CreatedAt = appointment.CreatedAt,
+            UpdatedAt = appointment.UpdatedAt
         };
     }
 
