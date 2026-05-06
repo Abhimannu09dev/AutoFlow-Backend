@@ -38,6 +38,18 @@ public class CustomersController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("search")]
+    public async Task<ActionResult<ApiResponse<List<CustomerResponseDto>>>> Search(
+        [FromQuery] string query,
+        CancellationToken cancellationToken)
+    {
+        var response = await _customerService.SearchAsync(query, cancellationToken);
+        if (!response.Status)
+            return BadRequest(response);
+
+        return Ok(response);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> GetById(
         Guid id,
