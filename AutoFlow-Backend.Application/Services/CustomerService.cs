@@ -1,5 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Customers;
+using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,11 @@ public class CustomerService : ICustomerService
     private const int EmailMaxLength = 200;
     private const int PhoneMaxLength = 30;
     private const int AddressMaxLength = 300;
+    private const int VehicleNumberMaxLength = 20;
+    private const int VehicleBrandMaxLength = 50;
+    private const int VehicleModelMaxLength = 50;
+    private const int VehicleColorMaxLength = 30;
+    private const int VehicleVinMaxLength = 50;
 
     private readonly IAppDbContext _dbContext;
 
@@ -121,6 +127,77 @@ public class CustomerService : ICustomerService
         return Success("Customer updated successfully.", Map(customer));
     }
 
+    public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
+        Guid customerId,
+        VehicleCreateDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var validationErrors = ValidateVehicle(request.VehicleNumber, request.Brand, request.Model, request.Year, request.Color, request.VIN);
+        if (validationErrors.Count > 0)
+        {
+            return ValidationFailure<VehicleResponseDto>(validationErrors);
+        }
+
+        var customer = await _dbContext.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
+
+        if (customer is null)
+        {
+            return Failure<VehicleResponseDto>("Customer not found.");
+        }
+
+        if (customer.ApplicationUserId is null)
+        {
+            return Failure<VehicleResponseDto>("Customer is not linked to a user account.");
+        }
+
+        var vehicle = new Vehicle
+        {
+            VehicleNumber = NormalizeVehicleNumber(request.VehicleNumber),
+            Brand = request.Brand.Trim(),
+            Model = request.Model.Trim(),
+            Year = request.Year,
+            Color = NormalizeOptional(request.Color),
+            VIN = NormalizeOptional(request.VIN),
+            UserId = customer.ApplicationUserId.Value,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _dbContext.Vehicles.AddAsync(vehicle, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Success("Vehicle added successfully.", Map(vehicle));
+    }
+
+    public async Task<ApiResponse<List<VehicleResponseDto>>> GetVehiclesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _dbContext.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
+
+        if (customer is null)
+        {
+            return Failure<List<VehicleResponseDto>>("Customer not found.");
+        }
+
+        if (customer.ApplicationUserId is null)
+        {
+            return Failure<List<VehicleResponseDto>>("Customer is not linked to a user account.");
+        }
+
+        var vehicles = await _dbContext.Vehicles
+            .AsNoTracking()
+            .Where(vehicle => vehicle.UserId == customer.ApplicationUserId.Value)
+            .OrderByDescending(vehicle => vehicle.CreatedAt)
+            .Select(vehicle => Map(vehicle))
+            .ToListAsync(cancellationToken);
+
+        return Success("Customer vehicles retrieved successfully.", vehicles);
+    }
+
     private static CustomerResponseDto Map(Customer customer)
     {
         return new CustomerResponseDto
@@ -131,6 +208,23 @@ public class CustomerService : ICustomerService
             Phone = customer.Phone,
             Address = customer.Address,
             CreatedAt = customer.CreatedAt
+        };
+    }
+
+    private static VehicleResponseDto Map(Vehicle vehicle)
+    {
+        return new VehicleResponseDto
+        {
+            Id = vehicle.Id,
+            VehicleNumber = vehicle.VehicleNumber,
+            Brand = vehicle.Brand,
+            Model = vehicle.Model,
+            Year = vehicle.Year,
+            Color = vehicle.Color,
+            VIN = vehicle.VIN,
+            UserId = vehicle.UserId,
+            CreatedAt = vehicle.CreatedAt,
+            UpdatedAt = vehicle.UpdatedAt
         };
     }
 
@@ -168,6 +262,65 @@ public class CustomerService : ICustomerService
 
         return errors;
     }
+
+    private static List<string> ValidateVehicle(
+        string? vehicleNumber,
+        string? brand,
+        string? model,
+        int year,
+        string? color,
+        string? vin)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(vehicleNumber))
+        {
+            errors.Add("Vehicle number is required.");
+        }
+        else if (vehicleNumber.Trim().Length > VehicleNumberMaxLength)
+        {
+            errors.Add($"Vehicle number must be at most {VehicleNumberMaxLength} characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(brand))
+        {
+            errors.Add("Brand is required.");
+        }
+        else if (brand.Trim().Length > VehicleBrandMaxLength)
+        {
+            errors.Add($"Brand must be at most {VehicleBrandMaxLength} characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            errors.Add("Model is required.");
+        }
+        else if (model.Trim().Length > VehicleModelMaxLength)
+        {
+            errors.Add($"Model must be at most {VehicleModelMaxLength} characters.");
+        }
+
+        var currentYear = DateTime.UtcNow.Year;
+        if (year < 1886 || year > currentYear + 1)
+        {
+            errors.Add($"Year must be between 1886 and {currentYear + 1}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(color) && color.Trim().Length > VehicleColorMaxLength)
+        {
+            errors.Add($"Color must be at most {VehicleColorMaxLength} characters.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vin) && vin.Trim().Length > VehicleVinMaxLength)
+        {
+            errors.Add($"VIN must be at most {VehicleVinMaxLength} characters.");
+        }
+
+        return errors;
+    }
+
+    private static string NormalizeVehicleNumber(string vehicleNumber)
+        => vehicleNumber.Trim().ToUpperInvariant();
 
     private static string NormalizeEmail(string email)
         => email.Trim().ToLowerInvariant();
