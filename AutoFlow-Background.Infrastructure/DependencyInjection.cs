@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IFinancialReportService, FinancialReportService>();
         services.AddScoped<ICustomerReportService, CustomerReportService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IFailurePredictionService, FailurePredictionService>();
 
         return services;
     }

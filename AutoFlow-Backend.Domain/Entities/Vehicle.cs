@@ -10,6 +10,7 @@ namespace AutoFlow_Backend.Domain.Entities
         public string VehicleNumber { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
         public string Model { get; set; } = string.Empty;
+        public int Mileage { get; set; } = 0;
         public int Year { get; set; }
         public string? Color { get; set; }
         public string? VIN { get; set; }
