@@ -72,6 +72,44 @@ public class CustomerService : ICustomerService
         return Success("Customers retrieved successfully.", customers);
     }
 
+    public async Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return ValidationFailure<List<CustomerResponseDto>>(new List<string> { "Search query is required." });
+        }
+
+        var normalizedQuery = query.Trim();
+        var normalizedLowerQuery = normalizedQuery.ToLowerInvariant();
+        var customerIdMatch = Guid.TryParse(normalizedQuery, out var customerId);
+
+        var matchingVehicleUserIds = await _dbContext.Vehicles
+            .AsNoTracking()
+            .Where(vehicle =>
+                vehicle.VehicleNumber.ToLower().Contains(normalizedLowerQuery) ||
+                vehicle.Brand.ToLower().Contains(normalizedLowerQuery) ||
+                vehicle.Model.ToLower().Contains(normalizedLowerQuery))
+            .Select(vehicle => vehicle.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var customers = await _dbContext.Customers
+            .AsNoTracking()
+            .Where(customer =>
+                (customer.FullName.ToLower().Contains(normalizedLowerQuery)) ||
+                (customer.Email.ToLower().Contains(normalizedLowerQuery)) ||
+                (customer.Phone != null && customer.Phone.ToLower().Contains(normalizedLowerQuery)) ||
+                (customerIdMatch && customer.Id == customerId) ||
+                (customer.ApplicationUserId.HasValue && matchingVehicleUserIds.Contains(customer.ApplicationUserId.Value)))
+            .OrderBy(customer => customer.FullName)
+            .Select(customer => Map(customer))
+            .ToListAsync(cancellationToken);
+
+        return Success("Customers searched successfully.", customers);
+    }
+
     public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var customer = await _dbContext.Customers
