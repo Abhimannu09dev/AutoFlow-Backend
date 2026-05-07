@@ -27,7 +27,7 @@ public class NotificationService : INotificationService
         var lowStockParts = await _partRepository.GetLowStockActiveAsync(cancellationToken);
 
         if (lowStockParts.Count == 0)
-            return Success("No low stock parts found.", true);
+            return ApiResponseFactory.Ok("No low stock parts found.", true);
 
         var partLines = lowStockParts.Select(p =>
             $"<li><strong>{p.PartName}</strong> — Stock: {p.StockQuantity} (Minimum: {p.MinimumStockLevel})</li>");
@@ -44,7 +44,7 @@ public class NotificationService : INotificationService
             body: body,
             cancellationToken: cancellationToken);
 
-        return Success($"Low stock alert sent for {lowStockParts.Count} part(s).", true);
+        return ApiResponseFactory.Ok($"Low stock alert sent for {lowStockParts.Count} part(s).", true);
     }
 
     public async Task<ApiResponse<bool>> SendCreditOverdueRemindersAsync(CancellationToken cancellationToken = default)
@@ -60,7 +60,7 @@ public class NotificationService : INotificationService
             .ToListAsync(cancellationToken);
 
         if (overdueSales.Count == 0)
-            return Success("No overdue credit sales found.", true);
+            return ApiResponseFactory.Ok("No overdue credit sales found.", true);
 
         foreach (var sale in overdueSales)
         {
@@ -82,12 +82,6 @@ public class NotificationService : INotificationService
                 cancellationToken: cancellationToken);
         }
 
-        return Success($"Credit overdue reminders sent to {overdueSales.Count} customer(s).", true);
+        return ApiResponseFactory.Ok($"Credit overdue reminders sent to {overdueSales.Count} customer(s).", true);
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

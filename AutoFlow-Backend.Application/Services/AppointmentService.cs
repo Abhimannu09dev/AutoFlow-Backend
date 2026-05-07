@@ -20,7 +20,7 @@ public class AppointmentService : IAppointmentService
         CancellationToken cancellationToken = default)
     {
         if (request.CustomerId == Guid.Empty)
-            return Fail<AppointmentResponse>("CustomerId is required.");
+            return ApiResponseFactory.Fail<AppointmentResponse>("CustomerId is required.");
 
         var appointment = new Appointment
         {
@@ -35,7 +35,7 @@ public class AppointmentService : IAppointmentService
         await _dbContext.Appointments.AddAsync(appointment, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Success("Appointment created successfully.", Map(appointment));
+        return ApiResponseFactory.Ok("Appointment created successfully.", Map(appointment));
     }
 
     public async Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
@@ -48,7 +48,7 @@ public class AppointmentService : IAppointmentService
             .Select(a => Map(a))
             .ToListAsync(cancellationToken);
 
-        return Success("Appointments retrieved successfully.", appointments);
+        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments);
     }
 
     public async Task<ApiResponse<AppointmentResponse>> GetByIdAsync(
@@ -62,9 +62,9 @@ public class AppointmentService : IAppointmentService
             .FirstOrDefaultAsync(cancellationToken);
 
         if (appointment is null)
-            return Fail<AppointmentResponse>("Appointment not found.");
+            return ApiResponseFactory.Fail<AppointmentResponse>("Appointment not found.");
 
-        return Success("Appointment retrieved successfully.", appointment);
+        return ApiResponseFactory.Ok("Appointment retrieved successfully.", appointment);
     }
 
     private static AppointmentResponse Map(Appointment a) => new()
@@ -77,10 +77,4 @@ public class AppointmentService : IAppointmentService
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt
     };
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

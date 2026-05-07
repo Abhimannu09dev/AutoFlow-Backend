@@ -20,10 +20,10 @@ public class PartRequestService : IPartRequestService
         CancellationToken cancellationToken = default)
     {
         if (request.CustomerId == Guid.Empty)
-            return Fail<PartRequestResponse>("CustomerId is required.");
+            return ApiResponseFactory.Fail<PartRequestResponse>("CustomerId is required.");
 
         if (string.IsNullOrWhiteSpace(request.PartName))
-            return Fail<PartRequestResponse>("PartName is required.");
+            return ApiResponseFactory.Fail<PartRequestResponse>("PartName is required.");
 
         var partRequest = new PartRequest
         {
@@ -38,7 +38,7 @@ public class PartRequestService : IPartRequestService
         await _dbContext.PartRequests.AddAsync(partRequest, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Success("Part request created successfully.", Map(partRequest));
+        return ApiResponseFactory.Ok("Part request created successfully.", Map(partRequest));
     }
 
     public async Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
@@ -50,7 +50,7 @@ public class PartRequestService : IPartRequestService
             .Select(pr => Map(pr))
             .ToListAsync(cancellationToken);
 
-        return Success("Part requests retrieved successfully.", results);
+        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results);
     }
 
     private static PartRequestResponse Map(PartRequest pr) => new()
@@ -63,10 +63,4 @@ public class PartRequestService : IPartRequestService
         CreatedAt = pr.CreatedAt,
         UpdatedAt = pr.UpdatedAt
     };
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

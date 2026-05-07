@@ -28,7 +28,7 @@ public class VendorService : IVendorService
         var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
         if (errors.Count > 0)
         {
-            return FailFromValidation<VendorResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<VendorResponse>(errors);
         }
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
@@ -36,7 +36,7 @@ public class VendorService : IVendorService
 
         if (duplicateExists)
         {
-            return Fail<VendorResponse>("Duplicate vendor name is not allowed.");
+            return ApiResponseFactory.Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
         var vendor = new Vendor
@@ -54,13 +54,13 @@ public class VendorService : IVendorService
         await _vendorRepository.AddAsync(vendor, cancellationToken);
         await _vendorRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Vendor created successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor created successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<List<VendorResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var vendors = await _vendorRepository.GetActiveAsync(cancellationToken);
-        return Success("Vendors retrieved successfully.", vendors.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<VendorResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -69,10 +69,10 @@ public class VendorService : IVendorService
 
         if (vendor is null)
         {
-            return Fail<VendorResponse>("Vendor not found.");
+            return ApiResponseFactory.Fail<VendorResponse>("Vendor not found.");
         }
 
-        return Success("Vendor retrieved successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor retrieved successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<VendorResponse>> UpdateAsync(
@@ -83,14 +83,14 @@ public class VendorService : IVendorService
         var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
         if (errors.Count > 0)
         {
-            return FailFromValidation<VendorResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<VendorResponse>(errors);
         }
 
         var vendor = await _vendorRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
 
         if (vendor is null)
         {
-            return Fail<VendorResponse>("Vendor not found.");
+            return ApiResponseFactory.Fail<VendorResponse>("Vendor not found.");
         }
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
@@ -98,7 +98,7 @@ public class VendorService : IVendorService
 
         if (duplicateExists)
         {
-            return Fail<VendorResponse>("Duplicate vendor name is not allowed.");
+            return ApiResponseFactory.Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
         vendor.VendorName = request.VendorName.Trim();
@@ -111,7 +111,7 @@ public class VendorService : IVendorService
         _vendorRepository.Update(vendor);
         await _vendorRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Vendor updated successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor updated successfully.", Map(vendor));
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -120,7 +120,7 @@ public class VendorService : IVendorService
 
         if (vendor is null)
         {
-            return Fail<bool>("Vendor not found.");
+            return ApiResponseFactory.Fail<bool>("Vendor not found.");
         }
 
         vendor.IsActive = false;
@@ -129,7 +129,7 @@ public class VendorService : IVendorService
         _vendorRepository.Update(vendor);
         await _vendorRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Vendor deleted successfully.", true);
+        return ApiResponseFactory.Ok("Vendor deleted successfully.", true);
     }
 
     public async Task<ApiResponse<List<VendorResponse>>> SearchAsync(
@@ -137,7 +137,7 @@ public class VendorService : IVendorService
         CancellationToken cancellationToken = default)
     {
         var vendors = await _vendorRepository.SearchActiveAsync(query, cancellationToken);
-        return Success("Vendors retrieved successfully.", vendors.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(Map).ToList());
     }
 
     private static VendorResponse Map(Vendor vendor)
@@ -229,31 +229,5 @@ public class VendorService : IVendorService
         {
             return false;
         }
-    }
-
-    private static ApiResponse<T> Success<T>(string message, T data)
-    {
-        return new ApiResponse<T>
-        {
-            Status = true,
-            Message = message,
-            Data = data
-        };
-    }
-
-    private static ApiResponse<T> Fail<T>(string message)
-    {
-        return new ApiResponse<T>
-        {
-            Status = false,
-            Message = message,
-            Data = default
-        };
-    }
-
-    private static ApiResponse<T> FailFromValidation<T>(List<string> errors)
-    {
-        var message = errors.Count > 0 ? string.Join(" ", errors) : "Validation failed.";
-        return Fail<T>(message);
     }
 }

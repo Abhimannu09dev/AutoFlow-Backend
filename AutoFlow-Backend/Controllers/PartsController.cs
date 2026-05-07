@@ -25,39 +25,15 @@ public class PartsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _partService.CreateAsync(request, cancellationToken);
-        return Ok(response);
+        if (!response.Status)
+            return BadRequest(response);
+        return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
 
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _partService.GetAllAsync(cancellationToken);
-        return Ok(response);
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<PartResponse>>> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        var response = await _partService.GetByIdAsync(id, cancellationToken);
-        return Ok(response);
-    }
-
-    [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponse<PartResponse>>> Update(
-        Guid id,
-        [FromBody] UpdatePartRequest request,
-        CancellationToken cancellationToken)
-    {
-        var response = await _partService.UpdateAsync(id, request, cancellationToken);
-        return Ok(response);
-    }
-
-    [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
-    {
-        var response = await _partService.DeleteAsync(id, cancellationToken);
         return Ok(response);
     }
 
@@ -74,6 +50,39 @@ public class PartsController : ControllerBase
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetLowStock(CancellationToken cancellationToken)
     {
         var response = await _partService.GetLowStockAsync(cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<PartResponse>>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _partService.GetByIdAsync(id, cancellationToken);
+        if (!response.Status)
+            return NotFound(response);
+        return Ok(response);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<PartResponse>>> Update(
+        Guid id,
+        [FromBody] UpdatePartRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _partService.UpdateAsync(id, request, cancellationToken);
+        if (!response.Status)
+            return response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(response) : BadRequest(response);
+        return Ok(response);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await _partService.DeleteAsync(id, cancellationToken);
+        if (!response.Status)
+            return NotFound(response);
         return Ok(response);
     }
 }

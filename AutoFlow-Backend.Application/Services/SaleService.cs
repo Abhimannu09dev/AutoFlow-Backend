@@ -27,21 +27,20 @@ public class SaleService : ISaleService
         CancellationToken cancellationToken = default)
     {
         if (request.Items == null || request.Items.Count == 0)
-            return Fail<SaleResponse>("Sale must have at least one item.");
+            return ApiResponseFactory.Fail<SaleResponse>("Sale must have at least one item.");
 
         var resolvedItems = new List<(SaleItemRequest Request, Part Part)>();
 
         foreach (var item in request.Items)
         {
             if (item.Quantity <= 0)
-                return Fail<SaleResponse>($"Quantity for part {item.PartId} must be greater than zero.");
+                return ApiResponseFactory.Fail<SaleResponse>($"Quantity for part {item.PartId} must be greater than zero.");
 
             var part = await _partRepository.GetActiveByIdForUpdateAsync(item.PartId, cancellationToken);
             if (part is null)
-                return Fail<SaleResponse>($"Part {item.PartId} not found.");
-
+                return ApiResponseFactory.Fail<SaleResponse>($"Part {item.PartId} not found."); 
             if (part.StockQuantity < item.Quantity)
-                return Fail<SaleResponse>($"Insufficient stock for part '{part.PartName}'. Available: {part.StockQuantity}, Requested: {item.Quantity}.");
+                return ApiResponseFactory.Fail<SaleResponse>($"Insufficient stock for part '{part.PartName}'. Available: {part.StockQuantity}, Requested: {item.Quantity}.");
 
             resolvedItems.Add((item, part));
         }
@@ -96,28 +95,28 @@ public class SaleService : ISaleService
         await _saleRepository.AddAsync(sale, cancellationToken);
         await _saleRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Sale created successfully.", MapToResponse(sale));
+        return ApiResponseFactory.Ok("Sale created successfully.", MapToResponse(sale));
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var sales = await _saleRepository.GetAllAsync(cancellationToken);
-        return Success("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
+        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
     }
 
     public async Task<ApiResponse<SaleResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var sale = await _saleRepository.GetByIdAsync(id, cancellationToken);
         if (sale is null)
-            return Fail<SaleResponse>("Sale not found.");
+            return ApiResponseFactory.Fail<SaleResponse>("Sale not found.");
 
-        return Success("Sale retrieved successfully.", MapToResponse(sale));
+        return ApiResponseFactory.Ok("Sale retrieved successfully.", MapToResponse(sale));
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
         var sales = await _saleRepository.GetByCustomerIdAsync(customerId, cancellationToken);
-        return Success("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
+        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
     }
 
     private static SaleResponse MapToResponse(Sale sale)
@@ -150,10 +149,4 @@ public class SaleService : ISaleService
             }).ToList()
         };
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

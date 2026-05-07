@@ -44,7 +44,7 @@ public class CustomerReportService : ICustomerReportService
                                  })
             .ToListAsync(cancellationToken);
 
-        return Success("Top spender report retrieved successfully.", topSpenders);
+        return ApiResponseFactory.Ok("Top spender report retrieved successfully.", topSpenders);
     }
 
     public async Task<ApiResponse<List<RegularCustomerReportResponse>>> GetRegularCustomersAsync(
@@ -77,7 +77,7 @@ public class CustomerReportService : ICustomerReportService
                                       })
             .ToListAsync(cancellationToken);
 
-        return Success("Regular customer report retrieved successfully.", regularCustomers);
+        return ApiResponseFactory.Ok("Regular customer report retrieved successfully.", regularCustomers);
     }
 
     public async Task<ApiResponse<List<PendingCreditCustomerReportResponse>>> GetPendingCreditCustomersAsync(
@@ -118,9 +118,6 @@ public class CustomerReportService : ICustomerReportService
             DaysOverdue = Math.Max(0, (int)(now - x.SaleDate).TotalDays)
         }).ToList();
 
-        return Success("Pending credit customer report retrieved successfully.", response);
+        return ApiResponseFactory.Ok("Pending credit customer report retrieved successfully.", response);
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
 }
