@@ -1,5 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Customers;
+using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +57,41 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
+        if (!response.Status)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpPost("{id:guid}/vehicles")]
+    public async Task<ActionResult<ApiResponse<VehicleResponseDto>>> AddVehicle(
+        Guid id,
+        [FromBody] VehicleCreateDto request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
+        if (!response.Status)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return CreatedAtAction(nameof(GetVehicles), new { id }, response);
+    }
+
+    [HttpGet("{id:guid}/vehicles")]
+    public async Task<ActionResult<ApiResponse<List<VehicleResponseDto>>>> GetVehicles(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _customerService.GetVehiclesAsync(id, cancellationToken);
         if (!response.Status)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
