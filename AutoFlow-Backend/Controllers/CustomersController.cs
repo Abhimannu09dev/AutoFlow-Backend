@@ -1,5 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Customers;
+using AutoFlow_Backend.Application.DTOs.Appointments;
+using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +37,39 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<ApiResponse<List<CustomerResponseDto>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _customerService.GetAllAsync(cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpGet("{id:guid}/purchases")]
+    public async Task<ActionResult<ApiResponse<List<SaleResponse>>>> GetPurchases(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _customerService.GetPurchasesAsync(id, cancellationToken);
+        if (!response.Status)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet("{id:guid}/services")]
+    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetServices(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _customerService.GetServicesAsync(id, cancellationToken);
+        if (!response.Status)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
         return Ok(response);
     }
 

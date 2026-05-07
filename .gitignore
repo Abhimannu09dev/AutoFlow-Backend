@@ -371,5 +371,10 @@ appsettings.Production.json
 
 # Keep example template
 !appsettings.Example.json
+<<<<<<< HEAD
+ 
+ 
+=======
 
 .idea/
+>>>>>>> main
