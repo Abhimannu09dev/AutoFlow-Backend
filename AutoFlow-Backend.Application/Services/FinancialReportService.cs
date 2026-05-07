@@ -36,7 +36,7 @@ public class FinancialReportService : IFinancialReportService
             NetRevenue = sales.Sum(s => s.TotalAmount)
         };
 
-        return Success("Daily financial report retrieved successfully.", report);
+        return ApiResponseFactory.Ok("Daily financial report retrieved successfully.", report);
     }
 
     public async Task<ApiResponse<FinancialReportResponse>> GetMonthlyReportAsync(
@@ -45,10 +45,10 @@ public class FinancialReportService : IFinancialReportService
         CancellationToken cancellationToken = default)
     {
         if (month < 1 || month > 12)
-            return Fail<FinancialReportResponse>("Month must be between 1 and 12.");
+            return ApiResponseFactory.Fail<FinancialReportResponse>("Month must be between 1 and 12.");
 
         if (year < 2000 || year > DateTime.UtcNow.Year)
-            return Fail<FinancialReportResponse>("Invalid year.");
+            return ApiResponseFactory.Fail<FinancialReportResponse>("Invalid year.");
 
         var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(1).AddTicks(-1);
@@ -67,7 +67,7 @@ public class FinancialReportService : IFinancialReportService
             NetRevenue = sales.Sum(s => s.TotalAmount)
         };
 
-        return Success("Monthly financial report retrieved successfully.", report);
+        return ApiResponseFactory.Ok("Monthly financial report retrieved successfully.", report);
     }
 
     public async Task<ApiResponse<FinancialReportResponse>> GetYearlyReportAsync(
@@ -75,7 +75,7 @@ public class FinancialReportService : IFinancialReportService
         CancellationToken cancellationToken = default)
     {
         if (year < 2000 || year > DateTime.UtcNow.Year)
-            return Fail<FinancialReportResponse>("Invalid year.");
+            return ApiResponseFactory.Fail<FinancialReportResponse>("Invalid year.");
 
         var start = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = new DateTime(year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -94,12 +94,6 @@ public class FinancialReportService : IFinancialReportService
             NetRevenue = sales.Sum(s => s.TotalAmount)
         };
 
-        return Success("Yearly financial report retrieved successfully.", report);
+        return ApiResponseFactory.Ok("Yearly financial report retrieved successfully.", report);
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

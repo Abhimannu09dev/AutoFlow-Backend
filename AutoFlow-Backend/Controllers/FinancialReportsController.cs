@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AutoFlow_Backend.API.Controllers;
+namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/reports/financial")]

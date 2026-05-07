@@ -23,10 +23,10 @@ public class FailurePredictionService : IFailurePredictionService
             .FirstOrDefaultAsync(c => c.Id == customerId, cancellationToken);
 
         if (customer is null)
-            return Fail<List<FailurePredictionResponse>>("Customer not found.");
+            return ApiResponseFactory.Fail<List<FailurePredictionResponse>>("Customer not found.");
 
         if (customer.ApplicationUserId is null)
-            return Fail<List<FailurePredictionResponse>>("Customer does not have a linked account.");
+            return ApiResponseFactory.Fail<List<FailurePredictionResponse>>("Customer does not have a linked account.");
 
         var vehicles = await _context.Vehicles
             .AsNoTracking()
@@ -34,7 +34,7 @@ public class FailurePredictionService : IFailurePredictionService
             .ToListAsync(cancellationToken);
 
         if (vehicles.Count == 0)
-            return Success("No vehicles found for this customer.", new List<FailurePredictionResponse>());
+            return ApiResponseFactory.Ok("No vehicles found for this customer.", new List<FailurePredictionResponse>());
 
         var predictions = new List<FailurePredictionResponse>();
 
@@ -144,12 +144,6 @@ public class FailurePredictionService : IFailurePredictionService
             });
         }
 
-        return Success("Failure predictions retrieved successfully.", predictions);
+        return ApiResponseFactory.Ok("Failure predictions retrieved successfully.", predictions);
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }

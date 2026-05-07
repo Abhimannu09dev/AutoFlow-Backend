@@ -41,7 +41,7 @@ public class PartService : IPartService
 
         if (errors.Count > 0)
         {
-            return FailFromValidation<PartResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<PartResponse>(errors);
         }
 
         var normalizedPartNumber = request.PartNumber!.Trim().ToLowerInvariant();
@@ -49,7 +49,7 @@ public class PartService : IPartService
 
         if (duplicateExists)
         {
-            return Fail<PartResponse>("Duplicate part number is not allowed.");
+            return ApiResponseFactory.Fail<PartResponse>("Duplicate part number is not allowed.");
         }
 
         string? vendorName = null;
@@ -58,7 +58,7 @@ public class PartService : IPartService
             vendorName = await _partRepository.GetActiveVendorNameByIdAsync(request.VendorId.Value, cancellationToken);
             if (vendorName is null)
             {
-                return Fail<PartResponse>("Vendor not found.");
+                return ApiResponseFactory.Fail<PartResponse>("Vendor not found.");
             }
         }
 
@@ -82,13 +82,13 @@ public class PartService : IPartService
         await _partRepository.AddAsync(part, cancellationToken);
         await _partRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Part created successfully.", Map(part, vendorName));
+        return ApiResponseFactory.Ok("Part created successfully.", Map(part, vendorName));
     }
 
     public async Task<ApiResponse<List<PartResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var parts = await _partRepository.GetActiveAsync(cancellationToken);
-        return Success("Parts retrieved successfully.", parts.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Parts retrieved successfully.", parts.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<PartResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -97,10 +97,10 @@ public class PartService : IPartService
 
         if (part is null)
         {
-            return Fail<PartResponse>("Part not found.");
+            return ApiResponseFactory.Fail<PartResponse>("Part not found.");
         }
 
-        return Success("Part retrieved successfully.", Map(part));
+        return ApiResponseFactory.Ok("Part retrieved successfully.", Map(part));
     }
 
     public async Task<ApiResponse<PartResponse>> UpdateAsync(
@@ -122,13 +122,13 @@ public class PartService : IPartService
 
         if (errors.Count > 0)
         {
-            return FailFromValidation<PartResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<PartResponse>(errors);
         }
 
         var part = await _partRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
         if (part is null)
         {
-            return Fail<PartResponse>("Part not found.");
+            return ApiResponseFactory.Fail<PartResponse>("Part not found.");
         }
 
         var normalizedPartNumber = request.PartNumber!.Trim().ToLowerInvariant();
@@ -136,7 +136,7 @@ public class PartService : IPartService
 
         if (duplicateExists)
         {
-            return Fail<PartResponse>("Duplicate part number is not allowed.");
+            return ApiResponseFactory.Fail<PartResponse>("Duplicate part number is not allowed.");
         }
 
         string? vendorName = null;
@@ -145,7 +145,7 @@ public class PartService : IPartService
             vendorName = await _partRepository.GetActiveVendorNameByIdAsync(request.VendorId.Value, cancellationToken);
             if (vendorName is null)
             {
-                return Fail<PartResponse>("Vendor not found.");
+                return ApiResponseFactory.Fail<PartResponse>("Vendor not found.");
             }
         }
 
@@ -164,7 +164,7 @@ public class PartService : IPartService
         _partRepository.Update(part);
         await _partRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Part updated successfully.", Map(part, vendorName));
+        return ApiResponseFactory.Ok("Part updated successfully.", Map(part, vendorName));
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -173,7 +173,7 @@ public class PartService : IPartService
 
         if (part is null)
         {
-            return Fail<bool>("Part not found.");
+            return ApiResponseFactory.Fail<bool>("Part not found.");
         }
 
         part.IsActive = false;
@@ -182,7 +182,7 @@ public class PartService : IPartService
         _partRepository.Update(part);
         await _partRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Part deleted successfully.", true);
+        return ApiResponseFactory.Ok("Part deleted successfully.", true);
     }
 
     public async Task<ApiResponse<List<PartResponse>>> SearchAsync(
@@ -190,13 +190,13 @@ public class PartService : IPartService
         CancellationToken cancellationToken = default)
     {
         var parts = await _partRepository.SearchActiveAsync(query, cancellationToken);
-        return Success("Parts retrieved successfully.", parts.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Parts retrieved successfully.", parts.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<List<PartResponse>>> GetLowStockAsync(CancellationToken cancellationToken = default)
     {
         var parts = await _partRepository.GetLowStockActiveAsync(cancellationToken);
-        return Success("Low-stock parts retrieved successfully.", parts.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Low-stock parts retrieved successfully.", parts.Select(Map).ToList());
     }
 
     private static PartResponse Map(Part part)
@@ -327,31 +327,5 @@ public class PartService : IPartService
         }
 
         return StockStatus.InStock;
-    }
-
-    private static ApiResponse<T> Success<T>(string message, T data)
-    {
-        return new ApiResponse<T>
-        {
-            Status = true,
-            Message = message,
-            Data = data
-        };
-    }
-
-    private static ApiResponse<T> Fail<T>(string message)
-    {
-        return new ApiResponse<T>
-        {
-            Status = false,
-            Message = message,
-            Data = default
-        };
-    }
-
-    private static ApiResponse<T> FailFromValidation<T>(List<string> errors)
-    {
-        var message = errors.Count > 0 ? string.Join(" ", errors) : "Validation failed.";
-        return Fail<T>(message);
     }
 }

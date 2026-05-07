@@ -1,5 +1,4 @@
 ﻿using AutoFlow_Backend.Domain.Enums;
-using System.Net.ServerSentEvents;
 
 namespace AutoFlow_Backend.Domain.Entities;
 
@@ -17,8 +16,6 @@ public class Sale
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-
-    // Navigation
     public Customer? Customer { get; set; }
     public ICollection<SaleItems> SaleItems { get; set; } = new List<SaleItems>();
 }

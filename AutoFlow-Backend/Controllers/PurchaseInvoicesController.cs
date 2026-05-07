@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace AutoFlow_Backend.API.Controllers;
+namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/purchase-invoices")]

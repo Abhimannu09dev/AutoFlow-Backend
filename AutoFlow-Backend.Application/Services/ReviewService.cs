@@ -20,7 +20,7 @@ public class ReviewService : IReviewService
         CancellationToken cancellationToken = default)
     {
         if (request.CustomerId == Guid.Empty)
-            return Fail<ReviewResponse>("CustomerId is required.");
+            return ApiResponseFactory.Fail<ReviewResponse>("CustomerId is required.");
 
         var review = new Review
         {
@@ -34,7 +34,7 @@ public class ReviewService : IReviewService
         await _dbContext.Reviews.AddAsync(review, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Success("Review created successfully.", Map(review));
+        return ApiResponseFactory.Ok("Review created successfully.", Map(review));
     }
 
     public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(
@@ -46,7 +46,7 @@ public class ReviewService : IReviewService
             .Select(r => Map(r))
             .ToListAsync(cancellationToken);
 
-        return Success("Reviews retrieved successfully.", results);
+        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results);
     }
 
     private static ReviewResponse Map(Review r) => new()
@@ -57,10 +57,4 @@ public class ReviewService : IReviewService
         Comment = r.Comment,
         CreatedAt = r.CreatedAt
     };
-
-    private static ApiResponse<T> Success<T>(string message, T data) =>
-        new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message) =>
-        new() { Status = false, Message = message, Data = default };
 }
