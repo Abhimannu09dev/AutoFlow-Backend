@@ -1,7 +1,7 @@
 ﻿using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Auth;
 using AutoFlow_Backend.Application.Interfaces;
-using AutoFlow_Backend.Application.Models;
+using AutoFlow_Background.Infrastructure.Configuration;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Background.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -37,7 +37,7 @@ public class AuthService : IAuthService
     {
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser is not null)
-            return Fail<AuthResponse>("Email is already registered.");
+            return ApiResponseFactory.Fail<AuthResponse>("Email is already registered.");
 
         var user = new ApplicationUser
         {
@@ -54,7 +54,7 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
         {
             var errors = result.Errors.Select(e => e.Description);
-            return Fail<AuthResponse>(string.Join(" ", errors));
+            return ApiResponseFactory.Fail<AuthResponse>(string.Join(" ", errors));
         }
 
         await _userManager.AddToRoleAsync(user, "Customer");
@@ -69,7 +69,7 @@ public class AuthService : IAuthService
         };
         await _context.Customers.AddAsync(customer, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        return Success("Registration successful.", await BuildAuthResponse(user));
+        return ApiResponseFactory.Ok("Registration successful.", await BuildAuthResponse(user));
     }
 
     public async Task<ApiResponse<AuthResponse>> LoginAsync(
@@ -77,13 +77,12 @@ public class AuthService : IAuthService
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user is null)
-            return Fail<AuthResponse>("Invalid email or password.");
+            return ApiResponseFactory.Fail<AuthResponse>("Invalid email or password.");
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
         if (!result.Succeeded)
-            return Fail<AuthResponse>("Invalid email or password.");
-
-        return Success("Login successful.", await BuildAuthResponse(user));
+            return ApiResponseFactory.Fail<AuthResponse>("Invalid email or password.");
+        return ApiResponseFactory.Ok("Login successful.", await BuildAuthResponse(user));
     }
 
     private async Task<AuthResponse> BuildAuthResponse(ApplicationUser user)
@@ -117,10 +116,4 @@ public class AuthService : IAuthService
             Roles = roles
         };
     }
-
-    private static ApiResponse<T> Success<T>(string message, T data)
-        => new() { Status = true, Message = message, Data = data };
-
-    private static ApiResponse<T> Fail<T>(string message)
-        => new() { Status = false, Message = message, Data = default };
 }

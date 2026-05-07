@@ -97,7 +97,7 @@ public class PartService : IPartService
 
         if (part is null)
         {
-            return ApiResponseFactory.Fail<PartResponse>("Part not found.");
+            return ApiResponseFactory.Fail<PartResponse>("Part not found.", ErrorType.NotFound);
         }
 
         return ApiResponseFactory.Ok("Part retrieved successfully.", Map(part));
@@ -128,7 +128,7 @@ public class PartService : IPartService
         var part = await _partRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
         if (part is null)
         {
-            return ApiResponseFactory.Fail<PartResponse>("Part not found.");
+            return ApiResponseFactory.Fail<PartResponse>("Part not found.", ErrorType.NotFound);
         }
 
         var normalizedPartNumber = request.PartNumber!.Trim().ToLowerInvariant();
@@ -173,7 +173,7 @@ public class PartService : IPartService
 
         if (part is null)
         {
-            return ApiResponseFactory.Fail<bool>("Part not found.");
+            return ApiResponseFactory.Fail<bool>("Part not found.", ErrorType.NotFound);
         }
 
         part.IsActive = false;
@@ -300,7 +300,6 @@ public class PartService : IPartService
         {
             errors.Add("VendorId is invalid.");
         }
-
         return errors;
     }
 

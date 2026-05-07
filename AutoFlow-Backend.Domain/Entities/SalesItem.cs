@@ -1,6 +1,6 @@
 ﻿namespace AutoFlow_Backend.Domain.Entities;
 
-public class SaleItems
+public class SaleItem
 {
     public Guid Id { get; set; }
     public Guid SaleId { get; set; }

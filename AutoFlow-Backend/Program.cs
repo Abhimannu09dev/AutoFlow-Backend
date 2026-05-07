@@ -1,4 +1,4 @@
-using AutoFlow_Backend.Application.Models;
+using AutoFlow_Background.Infrastructure.Configuration;
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Middleware;
 using AutoFlow_Backend.Filters;

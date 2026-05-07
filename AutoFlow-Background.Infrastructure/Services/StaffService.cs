@@ -38,19 +38,19 @@ public class StaffService : IStaffService
     {
         var errors = ValidateForCreate(request);
         if (errors.Count > 0)
-            return FailFromValidation<StaffResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
         if (existingUser is not null)
-            return Fail<StaffResponse>("Email is already registered.");
+            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
 
         var profileEmailExists = await _staffRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
         if (profileEmailExists)
-            return Fail<StaffResponse>("Email is already registered.");
+            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
 
         if (!await _roleManager.RoleExistsAsync(StaffRole))
-            return Fail<StaffResponse>("Staff role is not configured.");
+            return ApiResponseFactory.Fail<StaffResponse>("Staff role is not configured.");
 
         var user = new ApplicationUser
         {
@@ -65,20 +65,20 @@ public class StaffService : IStaffService
 
         var createUserResult = await _userManager.CreateAsync(user, request.Password);
         if (!createUserResult.Succeeded)
-            return Fail<StaffResponse>(string.Join(" ", createUserResult.Errors.Select(e => e.Description)));
+            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", createUserResult.Errors.Select(e => e.Description)));
 
         var assignRoleResult = await _userManager.AddToRoleAsync(user, StaffRole);
         if (!assignRoleResult.Succeeded)
         {
             await _userManager.DeleteAsync(user);
-            return Fail<StaffResponse>(string.Join(" ", assignRoleResult.Errors.Select(e => e.Description)));
+            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", assignRoleResult.Errors.Select(e => e.Description)));
         }
 
         var staffCode = await ResolveStaffCodeAsync(request.StaffCode, cancellationToken);
         if (staffCode is null)
         {
             await _userManager.DeleteAsync(user);
-            return Fail<StaffResponse>("Failed to generate a unique staff code.");
+            return ApiResponseFactory.Fail<StaffResponse>("Failed to generate a unique staff code.");
         }
 
         var staffProfile = new Staff
@@ -99,13 +99,13 @@ public class StaffService : IStaffService
         await _staffRepository.AddAsync(staffProfile, cancellationToken);
         await _staffRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Staff created successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff created successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var staffProfiles = await _staffRepository.GetAllAsync(cancellationToken);
-        return Success("Staff retrieved successfully.", staffProfiles.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfiles.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<StaffResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -113,9 +113,9 @@ public class StaffService : IStaffService
         var staffProfile = await _staffRepository.GetByIdAsync(id, cancellationToken);
 
         if (staffProfile is null)
-            return Fail<StaffResponse>("Staff not found.");
+            return ApiResponseFactory.Fail<StaffResponse>("Staff not found.");
 
-        return Success("Staff retrieved successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff retrieved successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<StaffResponse>> UpdateAsync(
@@ -125,27 +125,26 @@ public class StaffService : IStaffService
     {
         var errors = ValidateForUpdate(request);
         if (errors.Count > 0)
-            return FailFromValidation<StaffResponse>(errors);
+            return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
 
         var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
 
         if (staffProfile is null)
-            return Fail<StaffResponse>("Staff not found.");
+            return ApiResponseFactory.Fail<StaffResponse>("Staff not found.");
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var emailExistsInProfiles = await _staffRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
 
         if (emailExistsInProfiles)
-            return Fail<StaffResponse>("Email is already registered.");
+            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
 
         var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
         if (user is null)
-            return Fail<StaffResponse>("Staff account is not available.");
+            return ApiResponseFactory.Fail<StaffResponse>("Staff account is not available.");
 
         var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
         if (existingUser is not null && existingUser.Id != user.Id)
-            return Fail<StaffResponse>("Email is already registered.");
-
+            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
         user.FirstName = request.FirstName.Trim();
         user.LastName = request.LastName.Trim();
         user.Address = NormalizeOptional(request.Address);
@@ -156,7 +155,7 @@ public class StaffService : IStaffService
 
         var updateUserResult = await _userManager.UpdateAsync(user);
         if (!updateUserResult.Succeeded)
-            return Fail<StaffResponse>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
+            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
 
         staffProfile.FirstName = request.FirstName.Trim();
         staffProfile.LastName = request.LastName.Trim();
@@ -169,7 +168,7 @@ public class StaffService : IStaffService
         _staffRepository.Update(staffProfile);
         await _staffRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Staff updated successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff updated successfully.", Map(staffProfile));
     }
 
     public async Task<ApiResponse<bool>> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
@@ -177,10 +176,10 @@ public class StaffService : IStaffService
         var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
 
         if (staffProfile is null)
-            return Fail<bool>("Staff not found.");
+            return ApiResponseFactory.Fail<bool>("Staff not found.");
 
         if (!staffProfile.IsActive)
-            return Fail<bool>("Staff is already deactivated.");
+            return ApiResponseFactory.Fail<bool>("Staff is already deactivated.");
 
         var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
         if (user is not null)
@@ -191,7 +190,7 @@ public class StaffService : IStaffService
 
             var updateUserResult = await _userManager.UpdateAsync(user);
             if (!updateUserResult.Succeeded)
-                return Fail<bool>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
+                return ApiResponseFactory.Fail<bool>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
         }
 
         staffProfile.IsActive = false;
@@ -200,7 +199,7 @@ public class StaffService : IStaffService
         _staffRepository.Update(staffProfile);
         await _staffRepository.SaveChangesAsync(cancellationToken);
 
-        return Success("Staff deactivated successfully.", true);
+        return ApiResponseFactory.Ok("Staff deactivated successfully.", true);
     }
 
     private async Task<string?> ResolveStaffCodeAsync(string? requestedCode, CancellationToken cancellationToken)
@@ -331,31 +330,5 @@ public class StaffService : IStaffService
         {
             return false;
         }
-    }
-
-    private static ApiResponse<T> Success<T>(string message, T data)
-    {
-        return new ApiResponse<T>
-        {
-            Status = true,
-            Message = message,
-            Data = data
-        };
-    }
-
-    private static ApiResponse<T> Fail<T>(string message)
-    {
-        return new ApiResponse<T>
-        {
-            Status = false,
-            Message = message,
-            Data = default
-        };
-    }
-
-    private static ApiResponse<T> FailFromValidation<T>(List<string> errors)
-    {
-        var message = errors.Count > 0 ? string.Join(" ", errors) : "Validation failed.";
-        return Fail<T>(message);
     }
 }
