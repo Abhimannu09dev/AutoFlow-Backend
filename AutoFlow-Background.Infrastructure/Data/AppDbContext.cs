@@ -111,6 +111,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.Property(v => v.VehicleNumber).IsRequired().HasMaxLength(20);
             entity.Property(v => v.Brand).IsRequired().HasMaxLength(50);
             entity.Property(v => v.Model).IsRequired().HasMaxLength(50);
+            entity.Property(v => v.Mileage).IsRequired().HasDefaultValue(0);
             entity.Property(v => v.Color).HasMaxLength(30);
             entity.Property(v => v.VIN).HasMaxLength(50);
             entity.Property(v => v.CreatedAt).IsRequired();
