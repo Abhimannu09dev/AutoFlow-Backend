@@ -13,7 +13,7 @@ public class StaffRepository(AppDbContext context)
         Guid? excludeStaffId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = Context.Staffs
+        var query = Context.Staff
             .AsNoTracking()
             .Where(staff => staff.Email.ToLower() == normalizedEmail);
 
@@ -27,14 +27,14 @@ public class StaffRepository(AppDbContext context)
 
     public Task<bool> StaffCodeExistsAsync(string normalizedStaffCode, CancellationToken cancellationToken = default)
     {
-        return Context.Staffs
+        return Context.Staff
             .AsNoTracking()
             .AnyAsync(staff => staff.StaffCode == normalizedStaffCode, cancellationToken);
     }
 
     public Task<List<Staff>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return Context.Staffs
+        return Context.Staff
             .AsNoTracking()
             .OrderBy(staff => staff.FirstName)
             .ThenBy(staff => staff.LastName)
@@ -43,20 +43,20 @@ public class StaffRepository(AppDbContext context)
 
     public Task<Staff?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return Context.Staffs
+        return Context.Staff
             .AsNoTracking()
             .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
     }
 
     public Task<Staff?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return Context.Staffs
+        return Context.Staff
             .FirstOrDefaultAsync(staff => staff.Id == id, cancellationToken);
     }
 
     public Task<Staff?> GetByApplicationUserIdAsync(Guid applicationUserId, CancellationToken cancellationToken = default)
     {
-        return Context.Staffs
+        return Context.Staff
             .AsNoTracking()
             .FirstOrDefaultAsync(staff => staff.ApplicationUserId == applicationUserId, cancellationToken);
     }

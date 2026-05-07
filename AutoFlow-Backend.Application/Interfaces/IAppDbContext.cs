@@ -8,11 +8,11 @@ public interface IAppDbContext
     DbSet<Customer> Customers { get; }
     DbSet<Vendor> Vendors { get; }
     DbSet<Part> Parts { get; }
-    DbSet<Staff> Staffs { get; }
+    DbSet<Staff> Staff { get; }
     DbSet<Vehicle> Vehicles { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<Sale> Sales { get; }
-    DbSet<SaleItems> SaleItems { get; }
+    DbSet<SaleItem> SaleItems { get; }
     DbSet<PartRequest> PartRequests { get; }
     DbSet<Review> Reviews { get; }
     DbSet<PurchaseInvoice> PurchaseInvoices { get; }

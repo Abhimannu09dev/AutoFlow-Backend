@@ -65,13 +65,13 @@ public class PartsController : ControllerBase
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ApiResponse<PartResponse>>> Update(
-        Guid id,
-        [FromBody] UpdatePartRequest request,
-        CancellationToken cancellationToken)
+    Guid id,
+    [FromBody] UpdatePartRequest request,
+    CancellationToken cancellationToken)
     {
         var response = await _partService.UpdateAsync(id, request, cancellationToken);
         if (!response.Status)
-            return response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+            return response.ErrorType == ErrorType.NotFound
                 ? NotFound(response) : BadRequest(response);
         return Ok(response);
     }

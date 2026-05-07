@@ -1,5 +1,5 @@
 ﻿using AutoFlow_Backend.Application.Interfaces;
-using AutoFlow_Backend.Application.Models;
+using AutoFlow_Background.Infrastructure.Configuration;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;

@@ -17,5 +17,5 @@ public class Sale
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public Customer? Customer { get; set; }
-    public ICollection<SaleItems> SaleItems { get; set; } = new List<SaleItems>();
+    public ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
 }

@@ -14,11 +14,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<Part> Parts => Set<Part>();
-    public DbSet<Staff> Staffs => Set<Staff>();
+    public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Sale> Sales => Set<Sale>();
-    public DbSet<SaleItems> SaleItems => Set<SaleItems>();
+    public DbSet<SaleItem> SaleItems => Set<SaleItem>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
@@ -159,7 +159,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<SaleItems>(entity =>
+        modelBuilder.Entity<SaleItem>(entity =>
         {
             entity.ToTable("SaleItems");
             entity.HasKey(si => si.Id);

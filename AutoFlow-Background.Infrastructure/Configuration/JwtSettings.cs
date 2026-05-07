@@ -1,4 +1,4 @@
-﻿namespace AutoFlow_Backend.Application.Models;
+﻿namespace AutoFlow_Background.Infrastructure.Configuration;
 
 public class JwtSettings
 {

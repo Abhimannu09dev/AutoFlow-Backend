@@ -45,7 +45,7 @@ public class SaleService : ISaleService
             resolvedItems.Add((item, part));
         }
 
-        var saleItems = new List<SaleItems>();
+        var saleItems = new List<SaleItem>();
         decimal subTotal = 0;
 
         foreach (var (item, part) in resolvedItems)
@@ -53,7 +53,7 @@ public class SaleService : ISaleService
             var lineSubTotal = part.SellingPrice * item.Quantity;
             subTotal += lineSubTotal;
 
-            saleItems.Add(new SaleItems
+            saleItems.Add(new SaleItem
             {
                 Id = Guid.NewGuid(),
                 PartId = part.Id,

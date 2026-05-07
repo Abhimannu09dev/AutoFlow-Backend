@@ -28,7 +28,7 @@ public class DashboardService : IDashboardService
             .AsNoTracking()
             .CountAsync(cancellationToken);
 
-        var totalStaffCount = await _context.Staffs
+        var totalStaffCount = await _context.Staff
             .AsNoTracking()
             .CountAsync(staff => staff.IsActive, cancellationToken);
 
