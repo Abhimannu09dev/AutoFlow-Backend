@@ -19,7 +19,7 @@ public class NotificationsController : ControllerBase
     }
 
     /// <summary>
-    /// Send low stock alert notifications to admin
+    /// [Admin] Send low stock alert notifications for parts below minimum threshold
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Notification result for parts below minimum stock</returns>
@@ -33,7 +33,7 @@ public class NotificationsController : ControllerBase
     }
 
     /// <summary>
-    /// Send credit overdue reminders to customers
+    /// [Admin] Send credit overdue reminders to customers with outstanding balances
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Notification result for overdue credits</returns>

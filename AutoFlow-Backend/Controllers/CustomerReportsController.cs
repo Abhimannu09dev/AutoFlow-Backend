@@ -20,7 +20,7 @@ public class CustomerReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get top spending customers
+    /// [Admin, Staff] Get a list of top spending customers ordered by total spending amount
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of customers ordered by total spending</returns>
@@ -34,7 +34,7 @@ public class CustomerReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get regular customers (visited in last 30 days)
+    /// [Admin, Staff] Get customers who have visited or made a purchase in the last 30 days
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of active/regular customers</returns>
@@ -48,7 +48,7 @@ public class CustomerReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get customers with pending credit
+    /// [Admin, Staff] Get all customers who have a pending or overdue credit balance
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of customers with outstanding credit</returns>

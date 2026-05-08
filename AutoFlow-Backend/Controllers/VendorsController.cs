@@ -20,7 +20,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new vendor/supplier
+    /// [Admin] Create a new vendor/supplier record
     /// </summary>
     /// <param name="request">Vendor details (VendorName, ContactPerson, Email, Phone)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -39,7 +39,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all vendors
+    /// [Admin] Get all vendors/suppliers
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all vendors</returns>
@@ -53,7 +53,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Get vendor by ID
+    /// [Admin] Get a vendor by its ID
     /// </summary>
     /// <param name="id">Vendor ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -72,7 +72,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Update vendor details
+    /// [Admin] Update vendor details (contact info, email, phone, etc.)
     /// </summary>
     /// <param name="id">Vendor ID</param>
     /// <param name="request">Updated vendor details</param>
@@ -94,7 +94,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a vendor
+    /// [Admin] Delete a vendor record
     /// </summary>
     /// <param name="id">Vendor ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -113,7 +113,7 @@ public class VendorsController : ControllerBase
     }
 
     /// <summary>
-    /// Search vendors by name or contact person
+    /// [Admin] Search vendors by name or contact person
     /// </summary>
     /// <param name="query">Search query</param>
     /// <param name="cancellationToken">Cancellation token</param>

@@ -20,7 +20,7 @@ public class PredictionsController : ControllerBase
     }
 
     /// <summary>
-    /// Get vehicle failure predictions for a customer
+    /// [Any authenticated user] Get vehicle failure predictions for a customer. Customers can only access their own predictions; Staff/Admin can access any customer's predictions.
     /// </summary>
     /// <param name="customerId">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
