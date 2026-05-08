@@ -49,8 +49,7 @@ public static class IdentitySeeder
             {
                 UserName = adminEmail,
                 Email = adminEmail,
-                FirstName = string.IsNullOrWhiteSpace(seedSettings.FirstName) ? "System" : seedSettings.FirstName.Trim(),
-                LastName = string.IsNullOrWhiteSpace(seedSettings.LastName) ? "Admin" : seedSettings.LastName.Trim(),
+                FullName = string.IsNullOrWhiteSpace(seedSettings.FullName) ? "System Admin" : seedSettings.FullName.Trim(),
                 EmailConfirmed = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -79,7 +78,6 @@ public static class IdentitySeeder
         public bool Enabled { get; init; }
         public string? Email { get; init; }
         public string? Password { get; init; }
-        public string? FirstName { get; init; }
-        public string? LastName { get; init; }
+        public string? FullName { get; init; }
     }
 }

@@ -1,6 +1,5 @@
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Infrastructure.Entities;
-using AutoFlow_Backend.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace AutoFlow_Backend.Infrastructure.Services;
@@ -21,8 +20,7 @@ public class IdentityService : IIdentityService
     public async Task<(bool Succeeded, string? UserId, string? Error)> CreateUserAsync(
         string email,
         string password,
-        string firstName,
-        string lastName,
+        string fullName,
         string? phone,
         string? address,
         CancellationToken cancellationToken = default)
@@ -31,8 +29,7 @@ public class IdentityService : IIdentityService
         {
             UserName = email,
             Email = email,
-            FirstName = firstName,
-            LastName = lastName,
+            FullName = fullName,
             Address = address,
             PhoneNumber = phone,
             CreatedAt = DateTime.UtcNow
@@ -63,8 +60,7 @@ public class IdentityService : IIdentityService
     public async Task<(bool Succeeded, string? Error)> UpdateUserAsync(
         string userId,
         string email,
-        string firstName,
-        string lastName,
+        string fullName,
         string? phone,
         string? address,
         CancellationToken cancellationToken = default)
@@ -73,8 +69,7 @@ public class IdentityService : IIdentityService
         if (user is null)
             return (false, "Staff account is not available.");
 
-        user.FirstName = firstName;
-        user.LastName = lastName;
+        user.FullName = fullName;
         user.Address = address;
         user.PhoneNumber = phone;
         user.Email = email;

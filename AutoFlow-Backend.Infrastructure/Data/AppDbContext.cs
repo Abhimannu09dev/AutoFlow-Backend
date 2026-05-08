@@ -80,8 +80,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasKey(s => s.Id);
             entity.Property(s => s.Id).ValueGeneratedOnAdd();
             entity.Property(s => s.StaffCode).IsRequired().HasMaxLength(30);
-            entity.Property(s => s.FirstName).IsRequired().HasMaxLength(100);
-            entity.Property(s => s.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.FullName).IsRequired().HasMaxLength(200);
             entity.Property(s => s.Email).IsRequired().HasMaxLength(200);
             entity.Property(s => s.PhoneNumber).HasMaxLength(30);
             entity.Property(s => s.Address).HasMaxLength(300);

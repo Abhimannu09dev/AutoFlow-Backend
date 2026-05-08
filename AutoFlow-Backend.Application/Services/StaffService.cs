@@ -10,7 +10,7 @@ public class StaffService : IStaffService
 {
     private const string StaffRole = "Staff";
     private const int StaffCodeMaxLength = 30;
-    private const int NameMaxLength = 100;
+    private const int FullNameMaxLength = 200;
     private const int EmailMaxLength = 200;
     private const int PhoneMaxLength = 30;
     private const int AddressMaxLength = 300;
@@ -52,8 +52,7 @@ public class StaffService : IStaffService
         var (createSucceeded, userId, createError) = await _identityService.CreateUserAsync(
             email: normalizedEmail,
             password: request.Password,
-            firstName: request.FirstName.Trim(),
-            lastName: request.LastName.Trim(),
+            fullName: request.FullName.Trim(),
             phone: NormalizeOptional(request.Phone),
             address: NormalizeOptional(request.Address),
             cancellationToken: cancellationToken);
@@ -80,8 +79,7 @@ public class StaffService : IStaffService
             Id = Guid.NewGuid(),
             ApplicationUserId = Guid.Parse(userId),
             StaffCode = staffCode,
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
+            FullName = request.FullName.Trim(),
             Email = normalizedEmail,
             PhoneNumber = NormalizeOptional(request.Phone),
             Address = NormalizeOptional(request.Address),
@@ -141,8 +139,7 @@ public class StaffService : IStaffService
         var (updateSucceeded, updateError) = await _identityService.UpdateUserAsync(
             userId: staffProfile.ApplicationUserId.ToString(),
             email: normalizedEmail,
-            firstName: request.FirstName.Trim(),
-            lastName: request.LastName.Trim(),
+            fullName: request.FullName.Trim(),
             phone: NormalizeOptional(request.Phone),
             address: NormalizeOptional(request.Address),
             cancellationToken: cancellationToken);
@@ -150,8 +147,7 @@ public class StaffService : IStaffService
         if (!updateSucceeded)
             return ApiResponseFactory.Fail<StaffResponse>(updateError ?? "Failed to update user account.");
 
-        staffProfile.FirstName = request.FirstName.Trim();
-        staffProfile.LastName = request.LastName.Trim();
+        staffProfile.FullName = request.FullName.Trim();
         staffProfile.Email = normalizedEmail;
         staffProfile.PhoneNumber = NormalizeOptional(request.Phone);
         staffProfile.Address = NormalizeOptional(request.Address);
@@ -217,8 +213,7 @@ public class StaffService : IStaffService
         Id = staff.Id,
         ApplicationUserId = staff.ApplicationUserId,
         StaffCode = staff.StaffCode,
-        FirstName = staff.FirstName,
-        LastName = staff.LastName,
+        FullName = staff.FullName,
         Email = staff.Email,
         Phone = staff.PhoneNumber,
         Address = staff.Address,
@@ -231,7 +226,7 @@ public class StaffService : IStaffService
     private static List<string> ValidateForCreate(CreateStaffRequest request)
     {
         var errors = ValidateCommon(
-            request.StaffCode, request.FirstName, request.LastName,
+            request.StaffCode, request.FullName,
             request.Email, request.Phone, request.Address, request.Position);
 
         if (string.IsNullOrWhiteSpace(request.Password))
@@ -241,11 +236,11 @@ public class StaffService : IStaffService
     }
 
     private static List<string> ValidateForUpdate(UpdateStaffRequest request) =>
-        ValidateCommon(null, request.FirstName, request.LastName,
+        ValidateCommon(null, request.FullName,
             request.Email, request.Phone, request.Address, request.Position);
 
     private static List<string> ValidateCommon(
-        string? staffCode, string? firstName, string? lastName,
+        string? staffCode, string? fullName,
         string? email, string? phone, string? address, string? position)
     {
         var errors = new List<string>();
@@ -253,15 +248,10 @@ public class StaffService : IStaffService
         if (!string.IsNullOrWhiteSpace(staffCode) && staffCode.Trim().Length > StaffCodeMaxLength)
             errors.Add($"Staff code must be at most {StaffCodeMaxLength} characters.");
 
-        if (string.IsNullOrWhiteSpace(firstName))
-            errors.Add("First name is required.");
-        else if (firstName.Trim().Length > NameMaxLength)
-            errors.Add($"First name must be at most {NameMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(lastName))
-            errors.Add("Last name is required.");
-        else if (lastName.Trim().Length > NameMaxLength)
-            errors.Add($"Last name must be at most {NameMaxLength} characters.");
+        if (string.IsNullOrWhiteSpace(fullName))
+            errors.Add("Full name is required.");
+        else if (fullName.Trim().Length > FullNameMaxLength)
+            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
 
         if (string.IsNullOrWhiteSpace(email))
             errors.Add("Email is required.");

@@ -5,8 +5,6 @@ using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Infrastructure.Configuration;
 using AutoFlow_Backend.Infrastructure.Entities;
-using AutoFlow_Backend.Infrastructure.Configuration;
-using AutoFlow_Backend.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -47,8 +45,7 @@ public class AuthService : IAuthService
         {
             UserName = request.Email,
             Email = request.Email,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
+            FullName = request.FullName,
             Address = request.Address,
             PhoneNumber = request.Phone,
             CreatedAt = DateTime.UtcNow
@@ -63,7 +60,7 @@ public class AuthService : IAuthService
 
         var customer = new Customer
         {
-            FullName = $"{request.FirstName} {request.LastName}",
+            FullName = request.FullName,
             Email = request.Email,
             Phone = request.Phone,
             Address = request.Address,
@@ -118,8 +115,7 @@ public class AuthService : IAuthService
             Token = new JwtSecurityTokenHandler().WriteToken(token),
             Email = user.Email ?? string.Empty,
             UserId = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
+            FullName = user.FullName,
             Roles = roles
         };
     }

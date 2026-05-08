@@ -36,8 +36,7 @@ public class StaffRepository(AppDbContext context)
     {
         return Context.Staff
             .AsNoTracking()
-            .OrderBy(staff => staff.FirstName)
-            .ThenBy(staff => staff.LastName)
+            .OrderBy(staff => staff.FullName)
             .ToListAsync(cancellationToken);
     }
 

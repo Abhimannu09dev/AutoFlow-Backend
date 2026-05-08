@@ -5,8 +5,7 @@ public interface IIdentityService
     Task<(bool Succeeded, string? UserId, string? Error)> CreateUserAsync(
         string email,
         string password,
-        string firstName,
-        string lastName,
+        string fullName,
         string? phone,
         string? address,
         CancellationToken cancellationToken = default);
@@ -19,8 +18,7 @@ public interface IIdentityService
     Task<(bool Succeeded, string? Error)> UpdateUserAsync(
         string userId,
         string email,
-        string firstName,
-        string lastName,
+        string fullName,
         string? phone,
         string? address,
         CancellationToken cancellationToken = default);
