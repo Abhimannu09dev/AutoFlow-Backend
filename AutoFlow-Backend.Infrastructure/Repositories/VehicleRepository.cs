@@ -9,6 +9,12 @@ public class VehicleRepository : RepositoryBase<Vehicle>, IVehicleRepository
 {
     public VehicleRepository(AppDbContext context) : base(context) { }
 
+    public async Task<List<Vehicle>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await Context.Set<Vehicle>()
+            .AsNoTracking()
+            .OrderByDescending(v => v.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task<List<Vehicle>> GetByUserIdAsync(
         Guid userId,
         CancellationToken cancellationToken = default) =>
@@ -30,4 +36,13 @@ public class VehicleRepository : RepositoryBase<Vehicle>, IVehicleRepository
             .Select(v => v.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);
+
+    public async Task<Vehicle?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await Context.Set<Vehicle>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+
+    public async Task<Vehicle?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await Context.Set<Vehicle>()
+            .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
 }

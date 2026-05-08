@@ -2,56 +2,51 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AutoFlow_Backend.Application.DTOs.Vehicles;
 
-public class VehicleCreateDto
+public class VehicleUpdateDto
 {
     /// <summary>
-    /// Vehicle registration/plate number
+    /// Updated vehicle registration/plate number
     /// </summary>
     [Required]
     [MaxLength(20)]
     public string VehicleNumber { get; set; } = string.Empty;
 
     /// <summary>
-    /// Vehicle manufacturer (e.g., Toyota, Honda)
+    /// Updated vehicle manufacturer
     /// </summary>
     [Required]
     [MaxLength(50)]
     public string Brand { get; set; } = string.Empty;
 
     /// <summary>
-    /// Vehicle model name
+    /// Updated vehicle model name
     /// </summary>
     [Required]
     [MaxLength(50)]
     public string Model { get; set; } = string.Empty;
 
     /// <summary>
-    /// Manufacturing year of the vehicle
+    /// Updated manufacturing year
     /// </summary>
     [Required]
     [Range(1886, 3000)]
     public int Year { get; set; }
 
     /// <summary>
-    /// Current odometer reading in kilometers
+    /// Updated odometer reading (Staff/Admin only can update)
     /// </summary>
     [Range(0, int.MaxValue)]
-    public int Mileage { get; set; } = 0;
+    public int? Mileage { get; set; }
 
     /// <summary>
-    /// Vehicle color (optional)
+    /// Updated vehicle color (optional)
     /// </summary>
     [MaxLength(30)]
     public string? Color { get; set; }
 
     /// <summary>
-    /// Vehicle Identification Number (optional)
+    /// Updated Vehicle Identification Number (optional)
     /// </summary>
     [MaxLength(50)]
     public string? VIN { get; set; }
-
-    /// <summary>
-    /// For staff/admin to create vehicle on behalf of a customer (Customer user ID)
-    /// </summary>
-    public Guid? OwnerUserId { get; set; }
 }
