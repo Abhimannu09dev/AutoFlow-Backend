@@ -50,6 +50,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasKey(v => v.Id);
             entity.Property(v => v.Id).ValueGeneratedOnAdd();
             entity.Property(v => v.VendorName).IsRequired().HasMaxLength(150);
+            entity.Property(v => v.ContactPerson).HasMaxLength(150);
             entity.Property(v => v.Email).HasMaxLength(200);
             entity.Property(v => v.Phone).HasMaxLength(30);
             entity.Property(v => v.Address).HasMaxLength(300);
@@ -90,9 +91,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasIndex(s => s.StaffCode).IsUnique();
             entity.HasIndex(s => s.Email).IsUnique();
             entity.HasOne<ApplicationUser>()
-                  .WithOne()
+                  .WithOne(appUser => appUser.StaffProfile)
                   .HasForeignKey<Staff>(s => s.ApplicationUserId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Vehicle>(entity =>
@@ -158,7 +159,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                   .WithMany()
                   .HasForeignKey(si => si.PartId)
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Sale>()
+            entity.HasOne(si => si.Sale)
                   .WithMany(s => s.SaleItems)
                   .HasForeignKey(si => si.SaleId)
                   .OnDelete(DeleteBehavior.Cascade);
@@ -218,7 +219,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                   .WithMany()
                   .HasForeignKey(pii => pii.PartId)
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<PurchaseInvoice>()
+            entity.HasOne(pii => pii.PurchaseInvoice)
                   .WithMany(pi => pi.Items)
                   .HasForeignKey(pii => pii.PurchaseInvoiceId)
                   .OnDelete(DeleteBehavior.Cascade);
