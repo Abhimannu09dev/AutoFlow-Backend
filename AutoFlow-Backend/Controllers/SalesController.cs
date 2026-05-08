@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,14 +15,16 @@ namespace AutoFlow_Backend.Controllers;
 public class SalesController : ControllerBase
 {
     private readonly ISaleService _saleService;
+    private readonly IStaffRepository _staffRepository;
 
-    public SalesController(ISaleService saleService)
+    public SalesController(ISaleService saleService, IStaffRepository staffRepository)
     {
         _saleService = saleService;
+        _staffRepository = staffRepository;
     }
 
     /// <summary>
-    /// [Staff, Admin] Record a new sale transaction. StaffId is extracted from the authenticated user's token.
+    /// [Staff, Admin] Record a new sale transaction. The staff member is resolved from the authenticated user's profile and linked to the sale.
     /// </summary>
     /// <param name="request">Sale details (CustomerId, Items, PaymentMethod, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -34,11 +37,15 @@ public class SalesController : ControllerBase
         [FromBody] CreateSaleRequest request,
         CancellationToken cancellationToken)
     {
-        var staffIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (staffIdClaim is null || !Guid.TryParse(staffIdClaim, out var staffId))
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var applicationUserId))
             return Unauthorized();
 
-        var result = await _saleService.CreateAsync(request, staffId, cancellationToken);
+        var staff = await _staffRepository.GetByApplicationUserIdAsync(applicationUserId, cancellationToken);
+        if (staff is null || !staff.IsActive)
+            return Forbid();
+
+        var result = await _saleService.CreateAsync(request, staff.Id, cancellationToken);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
