@@ -1,8 +1,11 @@
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Infrastructure.Configuration;
+using AutoFlow_Backend.Infrastructure.Data;
+using AutoFlow_Backend.Infrastructure.Entities;
+using AutoFlow_Backend.Infrastructure.Repositories;
+using AutoFlow_Backend.Infrastructure.Services;
 using AutoFlow_Background.Infrastructure.Configuration;
-using AutoFlow_Backend.Application.Services;
-using AutoFlow_Background.Infrastructure.Data;
 using AutoFlow_Background.Infrastructure.Entities;
 using AutoFlow_Background.Infrastructure.Repositories;
 using AutoFlow_Background.Infrastructure.Services;
@@ -11,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AutoFlow_Background.Infrastructure;
+namespace AutoFlow_Backend.Infrastructure;
 
 public static class DependencyInjection
 {
@@ -41,28 +44,21 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
 
-        services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IVendorRepository, VendorRepository>();
         services.AddScoped<IPartRepository, PartRepository>();
         services.AddScoped<IStaffRepository, StaffRepository>();
-        services.AddScoped<ICustomerService, CustomerService>();
-        services.AddScoped<IVendorService, VendorService>();
-        services.AddScoped<IPartService, PartService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IAppointmentService, AppointmentService>();
-        services.AddScoped<IStaffService, StaffService>();
         services.AddScoped<ISaleRepository, SaleRepository>();
-        services.AddScoped<ISaleService, SaleService>();
-        services.AddScoped<IPartRequestService, PartRequestService>();
-        services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IPurchaseInvoiceRepository, PurchaseInvoiceRepository>();
-        services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IVehicleRepository, VehicleRepository>();
+        services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IPartRequestRepository, PartRequestRepository>();
+        services.AddScoped<IReportQueryRepository, ReportQueryRepository>();
+
+        services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<INotificationService, NotificationService>();
-        services.AddScoped<IFinancialReportService, FinancialReportService>();
-        services.AddScoped<ICustomerReportService, CustomerReportService>();
-        services.AddScoped<IDashboardService, DashboardService>();
-        services.AddScoped<IFailurePredictionService, FailurePredictionService>();
 
         return services;
     }

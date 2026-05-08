@@ -24,20 +24,27 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.CreateAsync(request, cancellationToken);
+        if (!response.IsSuccess)
+            return response.ErrorType == ErrorType.NotFound ? NotFound(response) : BadRequest(response);
         return Ok(response);
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<VendorResponse>>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<List<VendorResponse>>>> GetAll(
+        CancellationToken cancellationToken)
     {
         var response = await _vendorService.GetAllAsync(cancellationToken);
         return Ok(response);
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<VendorResponse>>> GetById(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<VendorResponse>>> GetById(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var response = await _vendorService.GetByIdAsync(id, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
         return Ok(response);
     }
 
@@ -48,13 +55,19 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.UpdateAsync(id, request, cancellationToken);
+        if (!response.IsSuccess)
+            return response.ErrorType == ErrorType.NotFound ? NotFound(response) : BadRequest(response);
         return Ok(response);
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<bool>>> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var response = await _vendorService.DeleteAsync(id, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
         return Ok(response);
     }
 
@@ -64,6 +77,8 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.SearchAsync(query, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
         return Ok(response);
     }
 }

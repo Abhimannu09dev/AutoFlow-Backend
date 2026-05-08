@@ -1,12 +1,14 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reviews;
 using AutoFlow_Backend.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/reviews")]
+[Authorize(Roles = "Customer,Admin,Staff")]
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;
@@ -22,6 +24,8 @@ public class ReviewsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _reviewService.CreateAsync(request, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
         return Ok(response);
     }
 

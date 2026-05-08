@@ -1,7 +1,7 @@
-using AutoFlow_Backend.Domain.Entities;
+﻿using AutoFlow_Backend.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace AutoFlow_Backend.Application.Interfaces;
+namespace AutoFlow_Backend.Infrastructure.Data;
 
 public interface IAppDbContext
 {

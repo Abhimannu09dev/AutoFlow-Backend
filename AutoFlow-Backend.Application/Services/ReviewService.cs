@@ -1,18 +1,18 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reviews;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class ReviewService : IReviewService
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IReviewRepository _reviewRepository;
 
-    public ReviewService(IAppDbContext dbContext)
+    public ReviewService(IReviewRepository reviewRepository)
     {
-        _dbContext = dbContext;
+        _reviewRepository = reviewRepository;
     }
 
     public async Task<ApiResponse<ReviewResponse>> CreateAsync(
@@ -31,8 +31,8 @@ public class ReviewService : IReviewService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Reviews.AddAsync(review, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _reviewRepository.AddAsync(review, cancellationToken);
+        await _reviewRepository.SaveChangesAsync(cancellationToken);
 
         return ApiResponseFactory.Ok("Review created successfully.", Map(review));
     }
@@ -40,13 +40,8 @@ public class ReviewService : IReviewService
     public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var results = await _dbContext.Reviews
-            .AsNoTracking()
-            .OrderByDescending(r => r.CreatedAt)
-            .Select(r => Map(r))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results);
+        var results = await _reviewRepository.GetAllAsync(cancellationToken);
+        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results.Select(Map).ToList());
     }
 
     private static ReviewResponse Map(Review r) => new()

@@ -1,12 +1,14 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/part-requests")]
+[Authorize(Roles = "Customer,Admin,Staff")]
 public class PartRequestsController : ControllerBase
 {
     private readonly IPartRequestService _partRequestService;
@@ -22,6 +24,8 @@ public class PartRequestsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _partRequestService.CreateAsync(request, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
         return Ok(response);
     }
 

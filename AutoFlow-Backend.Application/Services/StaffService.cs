@@ -1,12 +1,10 @@
-using AutoFlow_Backend.Application.Common;
+﻿using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Staff;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using AutoFlow_Background.Infrastructure.Entities;
-using Microsoft.AspNetCore.Identity;
 
-namespace AutoFlow_Background.Infrastructure.Services;
+namespace AutoFlow_Backend.Application.Services;
 
 public class StaffService : IStaffService
 {
@@ -18,17 +16,14 @@ public class StaffService : IStaffService
     private const int AddressMaxLength = 300;
     private const int PositionMaxLength = 100;
 
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+    private readonly IIdentityService _identityService;
     private readonly IStaffRepository _staffRepository;
 
     public StaffService(
-        UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole<Guid>> roleManager,
+        IIdentityService identityService,
         IStaffRepository staffRepository)
     {
-        _userManager = userManager;
-        _roleManager = roleManager;
+        _identityService = identityService;
         _staffRepository = staffRepository;
     }
 
@@ -41,50 +36,49 @@ public class StaffService : IStaffService
             return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
-        if (existingUser is not null)
-            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
+
+        var userEmailExists = await _identityService.UserExistsByEmailAsync(normalizedEmail, null, cancellationToken);
+        if (userEmailExists)
+            return ApiResponseFactory.FailConflict<StaffResponse>("Email is already registered.");
 
         var profileEmailExists = await _staffRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
         if (profileEmailExists)
-            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
+            return ApiResponseFactory.FailConflict<StaffResponse>("Email is already registered.");
 
-        if (!await _roleManager.RoleExistsAsync(StaffRole))
+        var roleExists = await _identityService.RoleExistsAsync(StaffRole, cancellationToken);
+        if (!roleExists)
             return ApiResponseFactory.Fail<StaffResponse>("Staff role is not configured.");
 
-        var user = new ApplicationUser
-        {
-            UserName = normalizedEmail,
-            Email = normalizedEmail,
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
-            Address = NormalizeOptional(request.Address),
-            PhoneNumber = NormalizeOptional(request.Phone),
-            CreatedAt = DateTime.UtcNow
-        };
+        var (createSucceeded, userId, createError) = await _identityService.CreateUserAsync(
+            email: normalizedEmail,
+            password: request.Password,
+            firstName: request.FirstName.Trim(),
+            lastName: request.LastName.Trim(),
+            phone: NormalizeOptional(request.Phone),
+            address: NormalizeOptional(request.Address),
+            cancellationToken: cancellationToken);
 
-        var createUserResult = await _userManager.CreateAsync(user, request.Password);
-        if (!createUserResult.Succeeded)
-            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", createUserResult.Errors.Select(e => e.Description)));
+        if (!createSucceeded || userId is null)
+            return ApiResponseFactory.Fail<StaffResponse>(createError ?? "Failed to create user account.");
 
-        var assignRoleResult = await _userManager.AddToRoleAsync(user, StaffRole);
-        if (!assignRoleResult.Succeeded)
+        var (assignSucceeded, assignError) = await _identityService.AssignRoleAsync(userId, StaffRole, cancellationToken);
+        if (!assignSucceeded)
         {
-            await _userManager.DeleteAsync(user);
-            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", assignRoleResult.Errors.Select(e => e.Description)));
+            await _identityService.DeleteUserAsync(userId, cancellationToken);
+            return ApiResponseFactory.Fail<StaffResponse>(assignError ?? "Failed to assign staff role.");
         }
 
         var staffCode = await ResolveStaffCodeAsync(request.StaffCode, cancellationToken);
         if (staffCode is null)
         {
-            await _userManager.DeleteAsync(user);
+            await _identityService.DeleteUserAsync(userId, cancellationToken);
             return ApiResponseFactory.Fail<StaffResponse>("Failed to generate a unique staff code.");
         }
 
         var staffProfile = new Staff
         {
             Id = Guid.NewGuid(),
-            ApplicationUserId = user.Id,
+            ApplicationUserId = Guid.Parse(userId),
             StaffCode = staffCode,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
@@ -102,18 +96,20 @@ public class StaffService : IStaffService
         return ApiResponseFactory.Ok("Staff created successfully.", Map(staffProfile));
     }
 
-    public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(
+        CancellationToken cancellationToken = default)
     {
         var staffProfiles = await _staffRepository.GetAllAsync(cancellationToken);
         return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfiles.Select(Map).ToList());
     }
 
-    public async Task<ApiResponse<StaffResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<StaffResponse>> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
         var staffProfile = await _staffRepository.GetByIdAsync(id, cancellationToken);
-
         if (staffProfile is null)
-            return ApiResponseFactory.Fail<StaffResponse>("Staff not found.");
+            return ApiResponseFactory.FailNotFound<StaffResponse>("Staff not found.");
 
         return ApiResponseFactory.Ok("Staff retrieved successfully.", Map(staffProfile));
     }
@@ -128,34 +124,31 @@ public class StaffService : IStaffService
             return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
 
         var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
-
         if (staffProfile is null)
-            return ApiResponseFactory.Fail<StaffResponse>("Staff not found.");
+            return ApiResponseFactory.FailNotFound<StaffResponse>("Staff not found.");
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        var emailExistsInProfiles = await _staffRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
 
-        if (emailExistsInProfiles)
-            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
+        var profileEmailTaken = await _staffRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
+        if (profileEmailTaken)
+            return ApiResponseFactory.FailConflict<StaffResponse>("Email is already registered.");
 
-        var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
-        if (user is null)
-            return ApiResponseFactory.Fail<StaffResponse>("Staff account is not available.");
+        var userEmailTaken = await _identityService.UserExistsByEmailAsync(
+            normalizedEmail, staffProfile.ApplicationUserId.ToString(), cancellationToken);
+        if (userEmailTaken)
+            return ApiResponseFactory.FailConflict<StaffResponse>("Email is already registered.");
 
-        var existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
-        if (existingUser is not null && existingUser.Id != user.Id)
-            return ApiResponseFactory.Fail<StaffResponse>("Email is already registered.");
-        user.FirstName = request.FirstName.Trim();
-        user.LastName = request.LastName.Trim();
-        user.Address = NormalizeOptional(request.Address);
-        user.PhoneNumber = NormalizeOptional(request.Phone);
-        user.Email = normalizedEmail;
-        user.UserName = normalizedEmail;
-        user.UpdatedAt = DateTime.UtcNow;
+        var (updateSucceeded, updateError) = await _identityService.UpdateUserAsync(
+            userId: staffProfile.ApplicationUserId.ToString(),
+            email: normalizedEmail,
+            firstName: request.FirstName.Trim(),
+            lastName: request.LastName.Trim(),
+            phone: NormalizeOptional(request.Phone),
+            address: NormalizeOptional(request.Address),
+            cancellationToken: cancellationToken);
 
-        var updateUserResult = await _userManager.UpdateAsync(user);
-        if (!updateUserResult.Succeeded)
-            return ApiResponseFactory.Fail<StaffResponse>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
+        if (!updateSucceeded)
+            return ApiResponseFactory.Fail<StaffResponse>(updateError ?? "Failed to update user account.");
 
         staffProfile.FirstName = request.FirstName.Trim();
         staffProfile.LastName = request.LastName.Trim();
@@ -171,27 +164,22 @@ public class StaffService : IStaffService
         return ApiResponseFactory.Ok("Staff updated successfully.", Map(staffProfile));
     }
 
-    public async Task<ApiResponse<bool>> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<bool>> DeactivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
         var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
-
         if (staffProfile is null)
-            return ApiResponseFactory.Fail<bool>("Staff not found.");
+            return ApiResponseFactory.FailNotFound<bool>("Staff not found.");
 
         if (!staffProfile.IsActive)
             return ApiResponseFactory.Fail<bool>("Staff is already deactivated.");
 
-        var user = await _userManager.FindByIdAsync(staffProfile.ApplicationUserId.ToString());
-        if (user is not null)
-        {
-            user.LockoutEnabled = true;
-            user.LockoutEnd = DateTimeOffset.MaxValue;
-            user.UpdatedAt = DateTime.UtcNow;
+        var (lockSucceeded, lockError) = await _identityService.LockUserAsync(
+            staffProfile.ApplicationUserId.ToString(), cancellationToken);
 
-            var updateUserResult = await _userManager.UpdateAsync(user);
-            if (!updateUserResult.Succeeded)
-                return ApiResponseFactory.Fail<bool>(string.Join(" ", updateUserResult.Errors.Select(e => e.Description)));
-        }
+        if (!lockSucceeded)
+            return ApiResponseFactory.Fail<bool>(lockError ?? "Failed to lock user account.");
 
         staffProfile.IsActive = false;
         staffProfile.UpdatedAt = DateTime.UtcNow;
@@ -202,7 +190,9 @@ public class StaffService : IStaffService
         return ApiResponseFactory.Ok("Staff deactivated successfully.", true);
     }
 
-    private async Task<string?> ResolveStaffCodeAsync(string? requestedCode, CancellationToken cancellationToken)
+    private async Task<string?> ResolveStaffCodeAsync(
+        string? requestedCode,
+        CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(requestedCode))
         {
@@ -215,7 +205,6 @@ public class StaffService : IStaffService
         {
             var generatedCode = $"STF-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
             var exists = await _staffRepository.StaffCodeExistsAsync(generatedCode, cancellationToken);
-
             if (!exists)
                 return generatedCode;
         }
@@ -223,35 +212,27 @@ public class StaffService : IStaffService
         return null;
     }
 
-    private static StaffResponse Map(Staff staff)
+    private static StaffResponse Map(Staff staff) => new()
     {
-        return new StaffResponse
-        {
-            Id = staff.Id,
-            ApplicationUserId = staff.ApplicationUserId,
-            StaffCode = staff.StaffCode,
-            FirstName = staff.FirstName,
-            LastName = staff.LastName,
-            Email = staff.Email,
-            Phone = staff.PhoneNumber,
-            Address = staff.Address,
-            Position = staff.Position,
-            IsActive = staff.IsActive,
-            CreatedAt = staff.CreatedAt,
-            UpdatedAt = staff.UpdatedAt
-        };
-    }
+        Id = staff.Id,
+        ApplicationUserId = staff.ApplicationUserId,
+        StaffCode = staff.StaffCode,
+        FirstName = staff.FirstName,
+        LastName = staff.LastName,
+        Email = staff.Email,
+        Phone = staff.PhoneNumber,
+        Address = staff.Address,
+        Position = staff.Position,
+        IsActive = staff.IsActive,
+        CreatedAt = staff.CreatedAt,
+        UpdatedAt = staff.UpdatedAt
+    };
 
     private static List<string> ValidateForCreate(CreateStaffRequest request)
     {
         var errors = ValidateCommon(
-            request.StaffCode,
-            request.FirstName,
-            request.LastName,
-            request.Email,
-            request.Phone,
-            request.Address,
-            request.Position);
+            request.StaffCode, request.FirstName, request.LastName,
+            request.Email, request.Phone, request.Address, request.Position);
 
         if (string.IsNullOrWhiteSpace(request.Password))
             errors.Add("Password is required.");
@@ -259,26 +240,13 @@ public class StaffService : IStaffService
         return errors;
     }
 
-    private static List<string> ValidateForUpdate(UpdateStaffRequest request)
-    {
-        return ValidateCommon(
-            null,
-            request.FirstName,
-            request.LastName,
-            request.Email,
-            request.Phone,
-            request.Address,
-            request.Position);
-    }
+    private static List<string> ValidateForUpdate(UpdateStaffRequest request) =>
+        ValidateCommon(null, request.FirstName, request.LastName,
+            request.Email, request.Phone, request.Address, request.Position);
 
     private static List<string> ValidateCommon(
-        string? staffCode,
-        string? firstName,
-        string? lastName,
-        string? email,
-        string? phone,
-        string? address,
-        string? position)
+        string? staffCode, string? firstName, string? lastName,
+        string? email, string? phone, string? address, string? position)
     {
         var errors = new List<string>();
 
@@ -314,10 +282,8 @@ public class StaffService : IStaffService
         return errors;
     }
 
-    private static string? NormalizeOptional(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsValidEmail(string email)
     {

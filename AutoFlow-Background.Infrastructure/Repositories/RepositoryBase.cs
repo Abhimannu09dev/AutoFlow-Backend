@@ -1,7 +1,7 @@
 using AutoFlow_Backend.Application.Interfaces.Repositories;
-using AutoFlow_Background.Infrastructure.Data;
+using AutoFlow_Backend.Infrastructure.Data;
 
-namespace AutoFlow_Background.Infrastructure.Repositories;
+namespace AutoFlow_Backend.Infrastructure.Repositories;
 
 public class RepositoryBase<T>(AppDbContext context) : IRepositoryBase<T>
     where T : class

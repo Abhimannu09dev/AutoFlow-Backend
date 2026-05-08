@@ -4,9 +4,8 @@ using AutoFlow_Backend.Application.DTOs.Customers;
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using AutoFlow_Backend.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -22,11 +21,21 @@ public class CustomerService : ICustomerService
     private const int VehicleColorMaxLength = 30;
     private const int VehicleVinMaxLength = 50;
 
-    private readonly IAppDbContext _dbContext;
+    private readonly ICustomerRepository _customerRepository;
+    private readonly IVehicleRepository _vehicleRepository;
+    private readonly ISaleRepository _saleRepository;
+    private readonly IAppointmentRepository _appointmentRepository;
 
-    public CustomerService(IAppDbContext dbContext)
+    public CustomerService(
+        ICustomerRepository customerRepository,
+        IVehicleRepository vehicleRepository,
+        ISaleRepository saleRepository,
+        IAppointmentRepository appointmentRepository)
     {
-        _dbContext = dbContext;
+        _customerRepository = customerRepository;
+        _vehicleRepository = vehicleRepository;
+        _saleRepository = saleRepository;
+        _appointmentRepository = appointmentRepository;
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> CreateAsync(
@@ -38,12 +47,9 @@ public class CustomerService : ICustomerService
             return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
 
         var normalizedEmail = NormalizeEmail(request.Email);
-        var emailExists = await _dbContext.Customers
-            .AsNoTracking()
-            .AnyAsync(customer => customer.Email.ToLower() == normalizedEmail, cancellationToken);
-
+        var emailExists = await _customerRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
         if (emailExists)
-            return ApiResponseFactory.Fail<CustomerResponseDto>("Email is already registered.");
+            return ApiResponseFactory.FailConflict<CustomerResponseDto>("Email is already registered.");
 
         var customer = new Customer
         {
@@ -54,8 +60,8 @@ public class CustomerService : ICustomerService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Customers.AddAsync(customer, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _customerRepository.AddAsync(customer, cancellationToken);
+        await _customerRepository.SaveChangesAsync(cancellationToken);
 
         return ApiResponseFactory.Ok("Customer created successfully.", Map(customer));
     }
@@ -63,109 +69,19 @@ public class CustomerService : ICustomerService
     public async Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var customers = await _dbContext.Customers
-            .AsNoTracking()
-            .OrderBy(customer => customer.FullName)
-            .Select(customer => Map(customer))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Customers retrieved successfully.", customers);
-    }
-
-    public async Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(
-        Guid customerId,
-        CancellationToken cancellationToken = default)
-    {
-        var customerExists = await _dbContext.Customers
-            .AsNoTracking()
-            .AnyAsync(customer => customer.Id == customerId, cancellationToken);
-
-        if (!customerExists)
-            return ApiResponseFactory.Fail<List<SaleResponse>>("Customer not found.");
-
-        var purchases = await _dbContext.Sales
-            .AsNoTracking()
-            .Where(sale => sale.CustomerId == customerId)
-            .OrderByDescending(sale => sale.SaleDate)
-            .ThenByDescending(sale => sale.CreatedAt)
-            .Select(sale => MapSale(sale))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Customer purchases retrieved successfully.", purchases);
-    }
-
-    public async Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(
-        Guid customerId,
-        CancellationToken cancellationToken = default)
-    {
-        var customerExists = await _dbContext.Customers
-            .AsNoTracking()
-            .AnyAsync(customer => customer.Id == customerId, cancellationToken);
-
-        if (!customerExists)
-            return ApiResponseFactory.Fail<List<AppointmentResponse>>("Customer not found.");
-
-        var services = await _dbContext.Appointments
-            .AsNoTracking()
-            .Where(appointment => appointment.CustomerId == customerId)
-            .OrderByDescending(appointment => appointment.Date)
-            .ThenByDescending(appointment => appointment.Time)
-            .Select(appointment => MapAppointment(appointment))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Customer services retrieved successfully.", services);
-    }
-
-    public async Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(
-        string query,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(query))
-            return ApiResponseFactory.FailFromValidation<List<CustomerResponseDto>>(new List<string> { "Search query is required." });
-
-        var normalizedQuery = query.Trim();
-        var normalizedLowerQuery = normalizedQuery.ToLowerInvariant();
-        var customerIdMatch = Guid.TryParse(normalizedQuery, out var customerId);
-
-        var matchingVehicleUserIds = await _dbContext.Vehicles
-            .AsNoTracking()
-            .Where(vehicle =>
-                vehicle.VehicleNumber.ToLower().Contains(normalizedLowerQuery) ||
-                vehicle.Brand.ToLower().Contains(normalizedLowerQuery) ||
-                vehicle.Model.ToLower().Contains(normalizedLowerQuery))
-            .Select(vehicle => vehicle.UserId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        var customers = await _dbContext.Customers
-            .AsNoTracking()
-            .Where(customer =>
-                (customer.FullName.ToLower().Contains(normalizedLowerQuery)) ||
-                (customer.Email.ToLower().Contains(normalizedLowerQuery)) ||
-                (customer.Phone != null && customer.Phone.ToLower().Contains(normalizedLowerQuery)) ||
-                (customerIdMatch && customer.Id == customerId) ||
-                (customer.ApplicationUserId.HasValue && matchingVehicleUserIds.Contains(customer.ApplicationUserId.Value)))
-            .OrderBy(customer => customer.FullName)
-            .Select(customer => Map(customer))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Customers searched successfully.", customers);
+        var customers = await _customerRepository.GetAllAsync(cancellationToken);
+        return ApiResponseFactory.Ok("Customers retrieved successfully.", customers.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var customer = await _dbContext.Customers
-            .AsNoTracking()
-            .Where(customer => customer.Id == id)
-            .Select(customer => Map(customer))
-            .FirstOrDefaultAsync(cancellationToken);
-
+        var customer = await _customerRepository.GetByIdAsync(id, cancellationToken);
         if (customer is null)
-            return ApiResponseFactory.Fail<CustomerResponseDto>("Customer not found.");
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer not found.");
 
-        return ApiResponseFactory.Ok("Customer retrieved successfully.", customer);
+        return ApiResponseFactory.Ok("Customer retrieved successfully.", Map(customer));
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> UpdateAsync(
@@ -177,28 +93,65 @@ public class CustomerService : ICustomerService
         if (validationErrors.Count > 0)
             return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
 
-        var customer = await _dbContext.Customers
-            .FirstOrDefaultAsync(customer => customer.Id == id, cancellationToken);
-
+        var customer = await _customerRepository.GetByIdForUpdateAsync(id, cancellationToken);
         if (customer is null)
-            return ApiResponseFactory.Fail<CustomerResponseDto>("Customer not found.");
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer not found.");
 
         var normalizedEmail = NormalizeEmail(request.Email);
-        var emailExists = await _dbContext.Customers
-            .AsNoTracking()
-            .AnyAsync(customer => customer.Id != id && customer.Email.ToLower() == normalizedEmail, cancellationToken);
-
+        var emailExists = await _customerRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
         if (emailExists)
-            return ApiResponseFactory.Fail<CustomerResponseDto>("Email is already registered.");
+            return ApiResponseFactory.FailConflict<CustomerResponseDto>("Email is already registered.");
 
         customer.FullName = request.FullName.Trim();
         customer.Email = normalizedEmail;
         customer.Phone = NormalizeOptional(request.Phone);
         customer.Address = NormalizeOptional(request.Address);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _customerRepository.Update(customer);
+        await _customerRepository.SaveChangesAsync(cancellationToken);
 
         return ApiResponseFactory.Ok("Customer updated successfully.", Map(customer));
+    }
+
+    public async Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return ApiResponseFactory.FailFromValidation<List<CustomerResponseDto>>(
+                new List<string> { "Search query is required." });
+
+        var normalizedLower = query.Trim().ToLowerInvariant();
+        var customerIdMatch = Guid.TryParse(query.Trim(), out var parsedId) ? parsedId : (Guid?)null;
+
+        var matchingUserIds = await _vehicleRepository.GetUserIdsByVehicleQueryAsync(normalizedLower, cancellationToken);
+        var customers = await _customerRepository.SearchAsync(normalizedLower, matchingUserIds, customerIdMatch, cancellationToken);
+
+        return ApiResponseFactory.Ok("Customers searched successfully.", customers.Select(Map).ToList());
+    }
+
+    public async Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer not found.");
+
+        var purchases = await _saleRepository.GetByCustomerIdAsync(customerId, cancellationToken);
+        return ApiResponseFactory.Ok("Customer purchases retrieved successfully.", purchases.Select(MapSale).ToList());
+    }
+
+    public async Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer not found.");
+
+        var services = await _appointmentRepository.GetByCustomerIdAsync(customerId, cancellationToken);
+        return ApiResponseFactory.Ok("Customer services retrieved successfully.", services.Select(MapAppointment).ToList());
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
@@ -210,12 +163,9 @@ public class CustomerService : ICustomerService
         if (validationErrors.Count > 0)
             return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(validationErrors);
 
-        var customer = await _dbContext.Customers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
-
+        var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);
         if (customer is null)
-            return ApiResponseFactory.Fail<VehicleResponseDto>("Customer not found.");
+            return ApiResponseFactory.FailNotFound<VehicleResponseDto>("Customer not found.");
 
         if (customer.ApplicationUserId is null)
             return ApiResponseFactory.Fail<VehicleResponseDto>("Customer is not linked to a user account.");
@@ -232,34 +182,25 @@ public class CustomerService : ICustomerService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Vehicles.AddAsync(vehicle, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _vehicleRepository.AddAsync(vehicle, cancellationToken);
+        await _vehicleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vehicle added successfully.", Map(vehicle));
+        return ApiResponseFactory.Ok("Vehicle added successfully.", MapVehicle(vehicle));
     }
 
     public async Task<ApiResponse<List<VehicleResponseDto>>> GetVehiclesAsync(
         Guid customerId,
         CancellationToken cancellationToken = default)
     {
-        var customer = await _dbContext.Customers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(customer => customer.Id == customerId, cancellationToken);
-
+        var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);
         if (customer is null)
-            return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Customer not found.");
+            return ApiResponseFactory.FailNotFound<List<VehicleResponseDto>>("Customer not found.");
 
         if (customer.ApplicationUserId is null)
             return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Customer is not linked to a user account.");
 
-        var vehicles = await _dbContext.Vehicles
-            .AsNoTracking()
-            .Where(vehicle => vehicle.UserId == customer.ApplicationUserId.Value)
-            .OrderByDescending(vehicle => vehicle.CreatedAt)
-            .Select(vehicle => Map(vehicle))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Customer vehicles retrieved successfully.", vehicles);
+        var vehicles = await _vehicleRepository.GetByUserIdAsync(customer.ApplicationUserId.Value, cancellationToken);
+        return ApiResponseFactory.Ok("Customer vehicles retrieved successfully.", vehicles.Select(MapVehicle).ToList());
     }
 
     private static CustomerResponseDto Map(Customer customer) => new()
@@ -272,7 +213,7 @@ public class CustomerService : ICustomerService
         CreatedAt = customer.CreatedAt
     };
 
-    private static VehicleResponseDto Map(Vehicle vehicle) => new()
+    private static VehicleResponseDto MapVehicle(Vehicle vehicle) => new()
     {
         Id = vehicle.Id,
         VehicleNumber = vehicle.VehicleNumber,
@@ -351,6 +292,7 @@ public class CustomerService : ICustomerService
         int year, string? color, string? vin)
     {
         var errors = new List<string>();
+        var currentYear = DateTime.UtcNow.Year;
 
         if (string.IsNullOrWhiteSpace(vehicleNumber))
             errors.Add("Vehicle number is required.");
@@ -367,7 +309,6 @@ public class CustomerService : ICustomerService
         else if (model.Trim().Length > VehicleModelMaxLength)
             errors.Add($"Model must be at most {VehicleModelMaxLength} characters.");
 
-        var currentYear = DateTime.UtcNow.Year;
         if (year < 1886 || year > currentYear + 1)
             errors.Add($"Year must be between 1886 and {currentYear + 1}.");
 
@@ -380,12 +321,12 @@ public class CustomerService : ICustomerService
         return errors;
     }
 
-    private static string NormalizeVehicleNumber(string vehicleNumber)
-        => vehicleNumber.Trim().ToUpperInvariant();
+    private static string NormalizeVehicleNumber(string vehicleNumber) =>
+        vehicleNumber.Trim().ToUpperInvariant();
 
-    private static string NormalizeEmail(string email)
-        => email.Trim().ToLowerInvariant();
+    private static string NormalizeEmail(string email) =>
+        email.Trim().ToLowerInvariant();
 
-    private static string? NormalizeOptional(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

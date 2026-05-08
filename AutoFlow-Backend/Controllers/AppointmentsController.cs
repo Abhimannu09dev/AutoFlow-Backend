@@ -24,6 +24,8 @@ public class AppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _appointmentService.CreateAsync(request, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
         return Ok(response);
     }
 
@@ -41,6 +43,8 @@ public class AppointmentsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _appointmentService.GetByIdAsync(id, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
         return Ok(response);
     }
 }

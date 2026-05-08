@@ -1,10 +1,8 @@
-﻿
-namespace AutoFlow_Backend.Domain.Enums
+﻿namespace AutoFlow_Backend.Domain.Enums;
+
+public enum SaleStatus
 {
-    public enum SaleStatus
-    {
-        Completed,
-        Pending,
-        Refunded,
-    }
+    Completed,
+    Pending,
+    Refunded
 }

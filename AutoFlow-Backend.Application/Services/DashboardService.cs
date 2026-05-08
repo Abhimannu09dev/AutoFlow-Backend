@@ -1,51 +1,27 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Dashboard;
 using AutoFlow_Backend.Application.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class DashboardService : IDashboardService
 {
-    private readonly IAppDbContext _context;
+    private readonly IReportQueryRepository _reportQueryRepository;
 
-    public DashboardService(IAppDbContext context)
+    public DashboardService(IReportQueryRepository reportQueryRepository)
     {
-        _context = context;
+        _reportQueryRepository = reportQueryRepository;
     }
 
-    public async Task<ApiResponse<DashboardResponse>> GetDashboardAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<DashboardResponse>> GetDashboardAsync(
+        CancellationToken cancellationToken = default)
     {
-        var totalSalesCount = await _context.Sales
-            .AsNoTracking()
-            .CountAsync(cancellationToken);
-
-        var totalRevenue = await _context.Sales
-            .AsNoTracking()
-            .SumAsync(sale => (decimal?)sale.TotalAmount, cancellationToken) ?? 0m;
-
-        var totalCustomersCount = await _context.Customers
-            .AsNoTracking()
-            .CountAsync(cancellationToken);
-
-        var totalStaffCount = await _context.Staff
-            .AsNoTracking()
-            .CountAsync(staff => staff.IsActive, cancellationToken);
-
-        var lowStockParts = await _context.Parts
-            .AsNoTracking()
-            .Where(part => part.IsActive && part.StockQuantity < part.MinimumStockLevel)
-            .OrderBy(part => part.StockQuantity)
-            .ThenBy(part => part.PartName)
-            .Select(part => new LowStockPartDashboardResponse
-            {
-                PartId = part.Id,
-                PartName = part.PartName,
-                PartNumber = part.PartNumber,
-                StockQuantity = part.StockQuantity,
-                MinimumStockLevel = part.MinimumStockLevel
-            })
-            .ToListAsync(cancellationToken);
+        var totalSalesCount = await _reportQueryRepository.CountSalesAsync(cancellationToken);
+        var totalRevenue = await _reportQueryRepository.SumSalesRevenueAsync(cancellationToken);
+        var totalCustomersCount = await _reportQueryRepository.CountCustomersAsync(cancellationToken);
+        var totalStaffCount = await _reportQueryRepository.CountActiveStaffAsync(cancellationToken);
+        var lowStockParts = await _reportQueryRepository.GetLowStockPartsAsync(cancellationToken);
 
         var dashboard = new DashboardResponse
         {
@@ -53,14 +29,16 @@ public class DashboardService : IDashboardService
             TotalRevenue = totalRevenue,
             TotalCustomersCount = totalCustomersCount,
             TotalStaffCount = totalStaffCount,
-            LowStockParts = lowStockParts
+            LowStockParts = lowStockParts.Select(part => new LowStockPartDashboardResponse
+            {
+                PartId = part.Id,
+                PartName = part.PartName,
+                PartNumber = part.PartNumber,
+                StockQuantity = part.StockQuantity,
+                MinimumStockLevel = part.MinimumStockLevel
+            }).ToList()
         };
 
-        return new ApiResponse<DashboardResponse>
-        {
-            Status = true,
-            Message = "Dashboard data retrieved successfully.",
-            Data = dashboard
-        };
+        return ApiResponseFactory.Ok("Dashboard data retrieved successfully.", dashboard);
     }
 }

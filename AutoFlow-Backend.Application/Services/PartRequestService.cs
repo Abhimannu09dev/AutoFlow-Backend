@@ -1,18 +1,18 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class PartRequestService : IPartRequestService
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IPartRequestRepository _partRequestRepository;
 
-    public PartRequestService(IAppDbContext dbContext)
+    public PartRequestService(IPartRequestRepository partRequestRepository)
     {
-        _dbContext = dbContext;
+        _partRequestRepository = partRequestRepository;
     }
 
     public async Task<ApiResponse<PartRequestResponse>> CreateAsync(
@@ -31,12 +31,12 @@ public class PartRequestService : IPartRequestService
             CustomerId = request.CustomerId,
             PartName = request.PartName.Trim(),
             Quantity = request.Quantity,
-            Status = string.IsNullOrWhiteSpace(request.Status) ? "Pending" : request.Status.Trim(),
+            Status = request.Status,
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.PartRequests.AddAsync(partRequest, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _partRequestRepository.AddAsync(partRequest, cancellationToken);
+        await _partRequestRepository.SaveChangesAsync(cancellationToken);
 
         return ApiResponseFactory.Ok("Part request created successfully.", Map(partRequest));
     }
@@ -44,13 +44,8 @@ public class PartRequestService : IPartRequestService
     public async Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var results = await _dbContext.PartRequests
-            .AsNoTracking()
-            .OrderByDescending(pr => pr.CreatedAt)
-            .Select(pr => Map(pr))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results);
+        var results = await _partRequestRepository.GetAllAsync(cancellationToken);
+        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results.Select(Map).ToList());
     }
 
     private static PartRequestResponse Map(PartRequest pr) => new()

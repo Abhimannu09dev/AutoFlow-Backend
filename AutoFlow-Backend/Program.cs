@@ -1,18 +1,20 @@
-using AutoFlow_Background.Infrastructure.Configuration;
-using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application;
+using AutoFlow_Backend.Converters;
+using AutoFlow_Backend.Infrastructure;
+using AutoFlow_Backend.Infrastructure.Configuration;
+using AutoFlow_Backend.Infrastructure.Identity;
 using AutoFlow_Backend.Middleware;
 using AutoFlow_Backend.Filters;
-using AutoFlow_Background.Infrastructure;
-using AutoFlow_Background.Infrastructure.Identity;
+using AutoFlow_Backend.Application.Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -70,7 +72,7 @@ builder.Services.AddControllers(options =>
 
         var response = new ApiResponse<object?>
         {
-            Status = false,
+            IsSuccess = false,
             Message = errorMessages.Count > 0
                 ? string.Join(" ", errorMessages)
                 : "Validation failed.",
@@ -91,22 +93,29 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
-    var jwtSecurityScheme = new OpenApiSecurityScheme
+    var jwtSecurityScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter: Bearer <your-jwt-token>"
     };
 
     options.AddSecurityDefinition("Bearer", jwtSecurityScheme);
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecuritySchemeReference("Bearer", document, null),
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
             new List<string>()
         }
     });
