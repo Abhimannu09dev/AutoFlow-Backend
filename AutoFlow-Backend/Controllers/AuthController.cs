@@ -1,4 +1,4 @@
-﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Auth;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _authService.RegisterAsync(request, cancellationToken);
-        return response.Status ? Ok(response) : BadRequest(response);
+        return response.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [HttpPost("login")]
@@ -34,6 +34,6 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _authService.LoginAsync(request, cancellationToken);
-        return response.Status ? Ok(response) : BadRequest(response);
+        return response.IsSuccess ? Ok(response) : BadRequest(response);
     }
 }

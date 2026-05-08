@@ -1,4 +1,4 @@
-﻿using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,7 +22,7 @@ public class FinancialReportsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _financialReportService.GetDailyReportAsync(date, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("monthly")]
@@ -32,7 +32,7 @@ public class FinancialReportsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _financialReportService.GetMonthlyReportAsync(year, month, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("yearly")]
@@ -41,6 +41,6 @@ public class FinancialReportsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _financialReportService.GetYearlyReportAsync(year, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }

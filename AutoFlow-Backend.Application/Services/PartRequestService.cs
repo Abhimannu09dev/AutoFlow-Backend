@@ -3,6 +3,7 @@ using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Domain.Enums;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -25,13 +26,17 @@ public class PartRequestService : IPartRequestService
         if (string.IsNullOrWhiteSpace(request.PartName))
             return ApiResponseFactory.Fail<PartRequestResponse>("PartName is required.");
 
+        var status = Enum.TryParse<PartRequestStatus>(request.Status, ignoreCase: true, out var parsed)
+            ? parsed
+            : PartRequestStatus.Pending;
+
         var partRequest = new PartRequest
         {
             Id = Guid.NewGuid(),
             CustomerId = request.CustomerId,
             PartName = request.PartName.Trim(),
             Quantity = request.Quantity,
-            Status = request.Status,
+            Status = status,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -54,7 +59,7 @@ public class PartRequestService : IPartRequestService
         CustomerId = pr.CustomerId,
         PartName = pr.PartName,
         Quantity = pr.Quantity,
-        Status = pr.Status,
+        Status = pr.Status.ToString(),
         CreatedAt = pr.CreatedAt,
         UpdatedAt = pr.UpdatedAt
     };

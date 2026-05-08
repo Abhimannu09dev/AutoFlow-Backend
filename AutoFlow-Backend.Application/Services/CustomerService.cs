@@ -259,7 +259,7 @@ public class CustomerService : ICustomerService
         CustomerId = appointment.CustomerId,
         Date = appointment.Date,
         Time = appointment.Time,
-        Status = appointment.Status,
+        Status = appointment.Status.ToString(),
         CreatedAt = appointment.CreatedAt,
         UpdatedAt = appointment.UpdatedAt
     };

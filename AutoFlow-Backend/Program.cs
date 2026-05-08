@@ -90,7 +90,6 @@ builder.Services.AddControllers(options =>
     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
 });
 
-builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
     var jwtSecurityScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -127,7 +126,6 @@ await IdentitySeeder.SeedRolesAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {

@@ -1,4 +1,4 @@
-﻿using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +22,6 @@ public class PredictionsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _failurePredictionService.GetPredictionsAsync(customerId, cancellationToken);
-        return result.Status ? Ok(result) : NotFound(result);
+        return result.IsSuccess ? Ok(result) : NotFound(result);
     }
 }

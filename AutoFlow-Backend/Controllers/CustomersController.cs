@@ -27,7 +27,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.CreateAsync(request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return BadRequest(response);
 
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
@@ -46,7 +46,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetPurchasesAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);
@@ -63,7 +63,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetServicesAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);
@@ -79,7 +79,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.SearchAsync(query, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return BadRequest(response);
 
         return Ok(response);
@@ -91,7 +91,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetByIdAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return NotFound(response);
 
         return Ok(response);
@@ -104,7 +104,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);
@@ -122,7 +122,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);
@@ -139,7 +139,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetVehiclesAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);

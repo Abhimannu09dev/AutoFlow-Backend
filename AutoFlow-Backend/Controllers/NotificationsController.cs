@@ -1,4 +1,4 @@
-﻿using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,13 +20,13 @@ public class NotificationsController : ControllerBase
     public async Task<IActionResult> SendLowStockAlert(CancellationToken cancellationToken)
     {
         var result = await _notificationService.SendLowStockAlertAsync(cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("credit-overdue")]
     public async Task<IActionResult> SendCreditOverdueReminders(CancellationToken cancellationToken)
     {
         var result = await _notificationService.SendCreditOverdueRemindersAsync(cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }

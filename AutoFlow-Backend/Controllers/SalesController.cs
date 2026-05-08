@@ -1,4 +1,4 @@
-﻿using AutoFlow_Backend.Application.DTOs.Sales;
+using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +28,7 @@ public class SalesController : ControllerBase
             return Unauthorized();
 
         var result = await _saleService.CreateAsync(request, staffId, cancellationToken);
-        return result.Status ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet]
@@ -42,7 +42,7 @@ public class SalesController : ControllerBase
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _saleService.GetByIdAsync(id, cancellationToken);
-        return result.Status ? Ok(result) : NotFound(result);
+        return result.IsSuccess ? Ok(result) : NotFound(result);
     }
 
     [HttpGet("customer/{customerId:guid}")]

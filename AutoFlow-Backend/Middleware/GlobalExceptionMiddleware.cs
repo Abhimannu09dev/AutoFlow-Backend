@@ -37,7 +37,7 @@ public sealed class GlobalExceptionMiddleware
 
         var response = new ApiResponse<object?>
         {
-            Status = false,
+            IsSuccess = false,
             Message = message,
             Data = null
         };

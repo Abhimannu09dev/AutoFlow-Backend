@@ -24,7 +24,7 @@ public class StaffController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _staffService.CreateAsync(request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return BadRequest(response);
 
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
@@ -41,7 +41,7 @@ public class StaffController : ControllerBase
     public async Task<ActionResult<ApiResponse<StaffResponse>>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var response = await _staffService.GetByIdAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return NotFound(response);
 
         return Ok(response);
@@ -54,7 +54,7 @@ public class StaffController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _staffService.UpdateAsync(id, request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);
@@ -69,7 +69,7 @@ public class StaffController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _staffService.DeactivateAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
         {
             if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 return NotFound(response);

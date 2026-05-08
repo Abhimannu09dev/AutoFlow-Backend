@@ -3,6 +3,7 @@ using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Domain.Enums;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -22,13 +23,17 @@ public class AppointmentService : IAppointmentService
         if (request.CustomerId == Guid.Empty)
             return ApiResponseFactory.Fail<AppointmentResponse>("CustomerId is required.");
 
+        var status = Enum.TryParse<AppointmentStatus>(request.Status, ignoreCase: true, out var parsed)
+            ? parsed
+            : AppointmentStatus.Pending;
+
         var appointment = new Appointment
         {
             Id = Guid.NewGuid(),
             CustomerId = request.CustomerId,
             Date = request.Date,
             Time = request.Time,
-            Status = request.Status,
+            Status = status,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -62,7 +67,7 @@ public class AppointmentService : IAppointmentService
         CustomerId = a.CustomerId,
         Date = a.Date,
         Time = a.Time,
-        Status = a.Status,
+        Status = a.Status.ToString(),
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt
     };
