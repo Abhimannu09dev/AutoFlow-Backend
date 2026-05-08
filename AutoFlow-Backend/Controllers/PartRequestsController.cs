@@ -20,7 +20,7 @@ public class PartRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new part request (customer requests a part not in inventory)
+    /// [Customer, Staff, Admin] Create a part request for items not in inventory. Customers request for themselves; Staff/Admin can request for any customer.
     /// </summary>
     /// <param name="request">Part request details (CustomerId, PartName, Quantity)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -39,7 +39,7 @@ public class PartRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all part requests
+    /// [Customer, Staff, Admin] Get all part requests. Customers see only their own; Staff/Admin see all.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all part requests</returns>

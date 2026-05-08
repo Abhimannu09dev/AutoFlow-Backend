@@ -20,7 +20,7 @@ public class FinancialReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get daily financial report
+    /// [Admin] Get daily financial report showing revenue, profit, and sales breakdown for a specific date
     /// </summary>
     /// <param name="date">Date for the report</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -37,7 +37,7 @@ public class FinancialReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get monthly financial report
+    /// [Admin] Get monthly financial report with a daily breakdown for a specific year and month
     /// </summary>
     /// <param name="year">Year (e.g., 2024)</param>
     /// <param name="month">Month (1-12)</param>
@@ -56,7 +56,7 @@ public class FinancialReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Get yearly financial report
+    /// [Admin] Get yearly financial report with a monthly breakdown for a specific year
     /// </summary>
     /// <param name="year">Year (e.g., 2024)</param>
     /// <param name="cancellationToken">Cancellation token</param>

@@ -19,7 +19,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Register a new customer account
+    /// [Public] Register a new customer account (no authentication required)
     /// </summary>
     /// <param name="request">Registration details including FullName, Email, Password, optional Address and Phone</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -39,7 +39,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Authenticate user and get JWT token
+    /// [Public] Authenticate user and get JWT token (no authentication required)
     /// </summary>
     /// <param name="request">Login credentials (Email and Password)</param>
     /// <param name="cancellationToken">Cancellation token</param>

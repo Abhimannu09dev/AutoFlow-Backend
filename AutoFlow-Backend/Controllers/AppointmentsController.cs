@@ -20,7 +20,7 @@ public class AppointmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new appointment
+    /// [Customer, Staff, Admin] Create a new appointment. Customers create for themselves; Staff/Admin can create for any customer.
     /// </summary>
     /// <param name="request">Appointment details (CustomerId, Date, Time, Description)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -39,7 +39,7 @@ public class AppointmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all appointments
+    /// [Customer, Staff, Admin] Get all appointments. Customers see only their own; Staff/Admin see all.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all appointments</returns>
@@ -53,7 +53,7 @@ public class AppointmentsController : ControllerBase
     }
 
     /// <summary>
-    /// Get appointment by ID
+    /// [Customer, Staff, Admin] Get an appointment by ID. Customers can only access their own appointments; Staff/Admin can access any.
     /// </summary>
     /// <param name="id">Appointment ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

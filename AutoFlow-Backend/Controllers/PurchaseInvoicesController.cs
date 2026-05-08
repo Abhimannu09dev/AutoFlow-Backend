@@ -21,7 +21,7 @@ public class PurchaseInvoicesController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new purchase invoice from vendor
+    /// [Admin] Create a purchase invoice from a vendor. Records inventory purchase and updates stock.
     /// </summary>
     /// <param name="request">Invoice details (VendorId, Items, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -43,7 +43,7 @@ public class PurchaseInvoicesController : ControllerBase
     }
 
     /// <summary>
-    /// Get all purchase invoices
+    /// [Admin] Get all purchase invoices
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all purchase invoices</returns>
@@ -56,7 +56,7 @@ public class PurchaseInvoicesController : ControllerBase
     }
 
     /// <summary>
-    /// Get purchase invoice by ID
+    /// [Admin] Get a purchase invoice by its ID
     /// </summary>
     /// <param name="id">Invoice ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -71,7 +71,7 @@ public class PurchaseInvoicesController : ControllerBase
     }
 
     /// <summary>
-    /// Get purchase invoices by vendor
+    /// [Admin] Get all purchase invoices for a specific vendor
     /// </summary>
     /// <param name="vendorId">Vendor ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

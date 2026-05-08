@@ -20,7 +20,7 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
-    /// Get admin dashboard overview
+    /// [Admin] Get an overview of key business metrics: total sales, revenue, customer count, appointments, and inventory status
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Dashboard statistics (sales count, revenue, customers, etc.)</returns>

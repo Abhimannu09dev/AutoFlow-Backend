@@ -20,7 +20,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new part in inventory
+    /// [Admin] Add a new part to the inventory
     /// </summary>
     /// <param name="request">Part details (PartName, PartNumber, UnitPrice, VendorId, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -40,7 +40,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all parts in inventory
+    /// [Admin, Staff] Get all parts in the inventory
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all parts</returns>
@@ -53,7 +53,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Search parts by name, number, or category
+    /// [Admin, Staff] Search parts by name, part number, or category
     /// </summary>
     /// <param name="query">Search query</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -69,7 +69,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Get parts with low stock (below minimum stock level)
+    /// [Admin, Staff] Get all parts that are below the minimum stock threshold
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of low stock parts</returns>
@@ -82,7 +82,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Get part by ID
+    /// [Admin, Staff] Get a specific part by its ID
     /// </summary>
     /// <param name="id">Part ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -99,7 +99,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Update part details
+    /// [Admin] Update part details (price, stock level, vendor, etc.)
     /// </summary>
     /// <param name="id">Part ID</param>
     /// <param name="request">Updated part details</param>
@@ -123,7 +123,7 @@ public class PartsController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a part from inventory
+    /// [Admin] Remove a part from the inventory (hard delete)
     /// </summary>
     /// <param name="id">Part ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

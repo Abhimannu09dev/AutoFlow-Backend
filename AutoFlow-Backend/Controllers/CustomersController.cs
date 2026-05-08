@@ -47,7 +47,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Get all customers
+    /// [Admin, Staff] Get all customers registered in the system
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all customers</returns>
@@ -60,7 +60,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Get customer's purchase history
+    /// [Admin, Staff] Get a specific customer's purchase history (sales transactions)
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -86,7 +86,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Get customer's service history (appointments)
+    /// [Admin, Staff] Get a specific customer's service history (appointments)
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -111,7 +111,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Search customers by name or email
+    /// [Admin, Staff] Search customers by name or email address
     /// </summary>
     /// <param name="query">Search query (name or email)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -131,7 +131,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Get customer by ID
+    /// [Admin, Staff] Get a customer by their ID
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -151,7 +151,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Update customer details
+    /// [Admin, Staff] Update a customer's details (name, phone, address, etc.)
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="request">Updated customer details</param>
@@ -179,7 +179,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Add a vehicle to customer
+    /// [Admin, Staff] Add a vehicle to a customer's profile
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="request">Vehicle details (VehicleNumber, Brand, Model, Year, etc.)</param>
@@ -207,7 +207,7 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Get customer's vehicles
+    /// [Admin, Staff] Get all vehicles registered under a customer
     /// </summary>
     /// <param name="id">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

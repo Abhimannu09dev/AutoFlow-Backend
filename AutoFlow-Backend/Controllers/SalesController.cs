@@ -21,7 +21,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new sale transaction
+    /// [Staff, Admin] Record a new sale transaction. StaffId is extracted from the authenticated user's token.
     /// </summary>
     /// <param name="request">Sale details (CustomerId, Items, PaymentMethod, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -43,7 +43,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// Get all sales transactions
+    /// [Staff, Admin] Get all sales transactions
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all sales</returns>
@@ -56,7 +56,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// Get sale by ID
+    /// [Staff, Admin] Get a sale by its ID
     /// </summary>
     /// <param name="id">Sale ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -71,7 +71,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// Get sales by customer ID
+    /// [Staff, Admin] Get all sales for a specific customer
     /// </summary>
     /// <param name="customerId">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

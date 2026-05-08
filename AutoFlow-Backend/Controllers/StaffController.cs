@@ -20,7 +20,7 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new staff member
+    /// [Admin] Create a new staff member with user account
     /// </summary>
     /// <param name="request">Staff details including FullName, Email, Password, Position</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -41,7 +41,7 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
-    /// Get all staff members
+    /// [Admin] Get all active staff members
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all active staff members</returns>
@@ -54,7 +54,7 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
-    /// Get staff member by ID
+    /// [Admin] Get a staff member by ID
     /// </summary>
     /// <param name="id">Staff ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -72,7 +72,7 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
-    /// Update staff member details
+    /// [Admin] Update staff member details (position, name, etc.)
     /// </summary>
     /// <param name="id">Staff ID</param>
     /// <param name="request">Updated staff details</param>
@@ -100,7 +100,7 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
-    /// Deactivate a staff member (soft delete)
+    /// [Admin] Deactivate a staff member (soft delete). Staff can no longer log in.
     /// </summary>
     /// <param name="id">Staff ID</param>
     /// <param name="cancellationToken">Cancellation token</param>

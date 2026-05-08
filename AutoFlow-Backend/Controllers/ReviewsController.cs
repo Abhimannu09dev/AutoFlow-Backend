@@ -20,7 +20,7 @@ public class ReviewsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new customer review
+    /// [Customer, Staff, Admin] Create a new customer review. Customers can review their own service experience.
     /// </summary>
     /// <param name="request">Review details (CustomerId, Rating 1-5, Comment)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -39,7 +39,7 @@ public class ReviewsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all reviews
+    /// [Customer, Staff, Admin] Get all customer reviews. Staff/Admin see all reviews.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all customer reviews</returns>
