@@ -9,6 +9,7 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/reports/customers")]
 [Authorize(Roles = "Admin,Staff")]
+[Tags("Customer Reports")]
 public class CustomerReportsController : ControllerBase
 {
     private readonly ICustomerReportService _customerReportService;
@@ -18,7 +19,13 @@ public class CustomerReportsController : ControllerBase
         _customerReportService = customerReportService;
     }
 
+    /// <summary>
+    /// Get top spending customers
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of customers ordered by total spending</returns>
     [HttpGet("top-spenders")]
+    [ProducesResponseType(typeof(ApiResponse<List<CustomerTopSpenderReportResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<CustomerTopSpenderReportResponse>>>> GetTopSpenders(
         CancellationToken cancellationToken)
     {
@@ -26,7 +33,13 @@ public class CustomerReportsController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Get regular customers (visited in last 30 days)
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of active/regular customers</returns>
     [HttpGet("regular")]
+    [ProducesResponseType(typeof(ApiResponse<List<RegularCustomerReportResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<RegularCustomerReportResponse>>>> GetRegularCustomers(
         CancellationToken cancellationToken)
     {
@@ -34,7 +47,13 @@ public class CustomerReportsController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Get customers with pending credit
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of customers with outstanding credit</returns>
     [HttpGet("pending-credit")]
+    [ProducesResponseType(typeof(ApiResponse<List<PendingCreditCustomerReportResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<PendingCreditCustomerReportResponse>>>> GetPendingCredit(
         CancellationToken cancellationToken)
     {

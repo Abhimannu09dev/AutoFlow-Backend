@@ -1,8 +1,6 @@
 ﻿using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
-using AutoFlow_Backend.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -10,22 +8,21 @@ public class NotificationService : INotificationService
 {
     private readonly IEmailService _emailService;
     private readonly IPartRepository _partRepository;
-    private readonly IAppDbContext _context;
+    private readonly IReportQueryRepository _reportQueryRepository;
 
     public NotificationService(
         IEmailService emailService,
         IPartRepository partRepository,
-        IAppDbContext context)
+        IReportQueryRepository reportQueryRepository)
     {
         _emailService = emailService;
         _partRepository = partRepository;
-        _context = context;
+        _reportQueryRepository = reportQueryRepository;
     }
 
     public async Task<ApiResponse<bool>> SendLowStockAlertAsync(CancellationToken cancellationToken = default)
     {
         var lowStockParts = await _partRepository.GetLowStockActiveAsync(cancellationToken);
-
         if (lowStockParts.Count == 0)
             return ApiResponseFactory.Ok("No low stock parts found.", true);
 
@@ -49,15 +46,8 @@ public class NotificationService : INotificationService
 
     public async Task<ApiResponse<bool>> SendCreditOverdueRemindersAsync(CancellationToken cancellationToken = default)
     {
-        var oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
-
-        var overdueSales = await _context.Sales
-            .Include(s => s.Customer)
-            .Where(s =>
-                s.PaymentMethod == PaymentMethod.Credit &&
-                s.SaleDate <= oneMonthAgo)
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        var cutoffDate = DateTime.UtcNow.AddMonths(-1);
+        var overdueSales = await _reportQueryRepository.GetOverdueCreditSalesAsync(cutoffDate, cancellationToken);
 
         if (overdueSales.Count == 0)
             return ApiResponseFactory.Ok("No overdue credit sales found.", true);

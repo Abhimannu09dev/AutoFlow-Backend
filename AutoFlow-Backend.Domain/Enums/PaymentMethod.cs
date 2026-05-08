@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace AutoFlow_Backend.Domain.Enums;
 
-namespace AutoFlow_Backend.Domain.Enums
+public enum PaymentMethod
 {
-    public enum PaymentMethod
-    {
-        Cash,
-        Credit,
-        Card,
-    }
+    Cash,
+    Credit,
+    Card
 }

@@ -1,18 +1,17 @@
 ﻿using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reports;
 using AutoFlow_Backend.Application.Interfaces;
-using AutoFlow_Backend.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class FinancialReportService : IFinancialReportService
 {
-    private readonly IAppDbContext _context;
+    private readonly IReportQueryRepository _reportQueryRepository;
 
-    public FinancialReportService(IAppDbContext context)
+    public FinancialReportService(IReportQueryRepository reportQueryRepository)
     {
-        _context = context;
+        _reportQueryRepository = reportQueryRepository;
     }
 
     public async Task<ApiResponse<FinancialReportResponse>> GetDailyReportAsync(
@@ -21,11 +20,7 @@ public class FinancialReportService : IFinancialReportService
     {
         var start = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var end = date.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
-
-        var sales = await _context.Sales
-            .AsNoTracking()
-            .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.Status == SaleStatus.Completed)
-            .ToListAsync(cancellationToken);
+        var sales = await _reportQueryRepository.GetCompletedSalesByDateRangeAsync(start, end, cancellationToken);
 
         var report = new FinancialReportResponse
         {
@@ -52,11 +47,7 @@ public class FinancialReportService : IFinancialReportService
 
         var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(1).AddTicks(-1);
-
-        var sales = await _context.Sales
-            .AsNoTracking()
-            .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.Status == SaleStatus.Completed)
-            .ToListAsync(cancellationToken);
+        var sales = await _reportQueryRepository.GetCompletedSalesByDateRangeAsync(start, end, cancellationToken);
 
         var report = new FinancialReportResponse
         {
@@ -79,11 +70,7 @@ public class FinancialReportService : IFinancialReportService
 
         var start = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = new DateTime(year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
-
-        var sales = await _context.Sales
-            .AsNoTracking()
-            .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.Status == SaleStatus.Completed)
-            .ToListAsync(cancellationToken);
+        var sales = await _reportQueryRepository.GetCompletedSalesByDateRangeAsync(start, end, cancellationToken);
 
         var report = new FinancialReportResponse
         {

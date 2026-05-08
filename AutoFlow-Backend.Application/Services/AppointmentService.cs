@@ -1,18 +1,19 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+using AutoFlow_Backend.Domain.Enums;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class AppointmentService : IAppointmentService
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IAppointmentRepository _appointmentRepository;
 
-    public AppointmentService(IAppDbContext dbContext)
+    public AppointmentService(IAppointmentRepository appointmentRepository)
     {
-        _dbContext = dbContext;
+        _appointmentRepository = appointmentRepository;
     }
 
     public async Task<ApiResponse<AppointmentResponse>> CreateAsync(
@@ -22,18 +23,22 @@ public class AppointmentService : IAppointmentService
         if (request.CustomerId == Guid.Empty)
             return ApiResponseFactory.Fail<AppointmentResponse>("CustomerId is required.");
 
+        var status = Enum.TryParse<AppointmentStatus>(request.Status, ignoreCase: true, out var parsed)
+            ? parsed
+            : AppointmentStatus.Pending;
+
         var appointment = new Appointment
         {
             Id = Guid.NewGuid(),
             CustomerId = request.CustomerId,
             Date = request.Date,
             Time = request.Time,
-            Status = string.IsNullOrWhiteSpace(request.Status) ? "Pending" : request.Status,
+            Status = status,
             CreatedAt = DateTime.UtcNow
         };
 
-        await _dbContext.Appointments.AddAsync(appointment, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _appointmentRepository.AddAsync(appointment, cancellationToken);
+        await _appointmentRepository.SaveChangesAsync(cancellationToken);
 
         return ApiResponseFactory.Ok("Appointment created successfully.", Map(appointment));
     }
@@ -41,30 +46,19 @@ public class AppointmentService : IAppointmentService
     public async Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var appointments = await _dbContext.Appointments
-            .AsNoTracking()
-            .OrderBy(a => a.Date)
-            .ThenBy(a => a.Time)
-            .Select(a => Map(a))
-            .ToListAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments);
+        var appointments = await _appointmentRepository.GetAllAsync(cancellationToken);
+        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments.Select(Map).ToList());
     }
 
     public async Task<ApiResponse<AppointmentResponse>> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var appointment = await _dbContext.Appointments
-            .AsNoTracking()
-            .Where(a => a.Id == id)
-            .Select(a => Map(a))
-            .FirstOrDefaultAsync(cancellationToken);
-
+        var appointment = await _appointmentRepository.GetByIdAsync(id, cancellationToken);
         if (appointment is null)
-            return ApiResponseFactory.Fail<AppointmentResponse>("Appointment not found.");
+            return ApiResponseFactory.FailNotFound<AppointmentResponse>("Appointment not found.");
 
-        return ApiResponseFactory.Ok("Appointment retrieved successfully.", appointment);
+        return ApiResponseFactory.Ok("Appointment retrieved successfully.", Map(appointment));
     }
 
     private static AppointmentResponse Map(Appointment a) => new()
@@ -73,7 +67,7 @@ public class AppointmentService : IAppointmentService
         CustomerId = a.CustomerId,
         Date = a.Date,
         Time = a.Time,
-        Status = a.Status,
+        Status = a.Status.ToString(),
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt
     };

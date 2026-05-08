@@ -2,5 +2,5 @@
   <Project Path="AutoFlow-Backend.Application/AutoFlow-Backend.Application.csproj" Id="ff6d3c09-fc5f-4f2e-9510-82a165f6f624" />
   <Project Path="AutoFlow-Backend.Domain/AutoFlow-Backend.Domain.csproj" Id="a6c75dc5-c296-48bd-a196-48b44209d94a" />
   <Project Path="AutoFlow-Backend/AutoFlow-Backend.csproj" />
-  <Project Path="AutoFlow-Background.Infrastructure/AutoFlow-Background.Infrastructure.csproj" Id="cd2fa1c5-273d-481f-9de6-46c9df649e2a" />
+  <Project Path="AutoFlow-Backend.Infrastructure/AutoFlow-Backend.Infrastructure.csproj" Id="cd2fa1c5-273d-481f-9de6-46c9df649e2a" />
 </Solution>

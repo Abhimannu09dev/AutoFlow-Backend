@@ -9,6 +9,7 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/parts")]
 [Authorize(Roles = "Admin,Staff")]
+[Tags("Parts Inventory")]
 public class PartsController : ControllerBase
 {
     private readonly IPartService _partService;
@@ -18,26 +19,47 @@ public class PartsController : ControllerBase
         _partService = partService;
     }
 
+    /// <summary>
+    /// Create a new part in inventory
+    /// </summary>
+    /// <param name="request">Part details (PartName, PartNumber, UnitPrice, VendorId, etc.)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Created part details</returns>
     [HttpPost]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<PartResponse>>> Create(
         [FromBody] CreatePartRequest request,
         CancellationToken cancellationToken)
     {
         var response = await _partService.CreateAsync(request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return BadRequest(response);
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
 
+    /// <summary>
+    /// Get all parts in inventory
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of all parts</returns>
     [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _partService.GetAllAsync(cancellationToken);
         return Ok(response);
     }
 
+    /// <summary>
+    /// Search parts by name, number, or category
+    /// </summary>
+    /// <param name="query">Search query</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of matching parts</returns>
     [HttpGet("search")]
+    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> Search(
         [FromQuery] string? query,
         CancellationToken cancellationToken)
@@ -46,42 +68,74 @@ public class PartsController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Get parts with low stock (below minimum stock level)
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of low stock parts</returns>
     [HttpGet("low-stock")]
+    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetLowStock(CancellationToken cancellationToken)
     {
         var response = await _partService.GetLowStockAsync(cancellationToken);
         return Ok(response);
     }
 
+    /// <summary>
+    /// Get part by ID
+    /// </summary>
+    /// <param name="id">Part ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Part details</returns>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<PartResponse>>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var response = await _partService.GetByIdAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return NotFound(response);
         return Ok(response);
     }
 
+    /// <summary>
+    /// Update part details
+    /// </summary>
+    /// <param name="id">Part ID</param>
+    /// <param name="request">Updated part details</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated part details</returns>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<PartResponse>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<PartResponse>>> Update(
     Guid id,
     [FromBody] UpdatePartRequest request,
     CancellationToken cancellationToken)
     {
         var response = await _partService.UpdateAsync(id, request, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return response.ErrorType == ErrorType.NotFound
                 ? NotFound(response) : BadRequest(response);
         return Ok(response);
     }
 
+    /// <summary>
+    /// Delete a part from inventory
+    /// </summary>
+    /// <param name="id">Part ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Deletion confirmation</returns>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _partService.DeleteAsync(id, cancellationToken);
-        if (!response.Status)
+        if (!response.IsSuccess)
             return NotFound(response);
         return Ok(response);
     }

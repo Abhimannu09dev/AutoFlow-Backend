@@ -9,6 +9,7 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/dashboard")]
 [Authorize(Roles = "Admin")]
+[Tags("Dashboard")]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
@@ -18,7 +19,13 @@ public class DashboardController : ControllerBase
         _dashboardService = dashboardService;
     }
 
+    /// <summary>
+    /// Get admin dashboard overview
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dashboard statistics (sales count, revenue, customers, etc.)</returns>
     [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<DashboardResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<DashboardResponse>>> Get(CancellationToken cancellationToken)
     {
         var response = await _dashboardService.GetDashboardAsync(cancellationToken);
