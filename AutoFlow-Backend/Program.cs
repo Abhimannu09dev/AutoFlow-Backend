@@ -118,6 +118,29 @@ builder.Services.AddSwaggerGen(options =>
             new List<string>()
         }
     });
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "AutoFlow API",
+        Version = "v1",
+        Description = "Auto Repair Shop Management System API",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "AutoFlow Support",
+            Email = "support@autoflow.com"
+        },
+        License = new Microsoft.OpenApi.Models.OpenApiLicense
+        {
+            Name = "MIT License"
+        }
+    });
 });
 
 var app = builder.Build();
