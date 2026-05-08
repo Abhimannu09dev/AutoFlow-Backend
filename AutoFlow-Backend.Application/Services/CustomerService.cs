@@ -6,6 +6,7 @@ using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -20,22 +21,32 @@ public class CustomerService : ICustomerService
     private const int VehicleModelMaxLength = 50;
     private const int VehicleColorMaxLength = 30;
     private const int VehicleVinMaxLength = 50;
+    private const string CustomerRole = "Customer";
 
     private readonly ICustomerRepository _customerRepository;
     private readonly IVehicleRepository _vehicleRepository;
     private readonly ISaleRepository _saleRepository;
     private readonly IAppointmentRepository _appointmentRepository;
+    private readonly IIdentityService _identityService;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<CustomerService> _logger;
 
     public CustomerService(
         ICustomerRepository customerRepository,
         IVehicleRepository vehicleRepository,
         ISaleRepository saleRepository,
-        IAppointmentRepository appointmentRepository)
+        IAppointmentRepository appointmentRepository,
+        IIdentityService identityService,
+        IEmailService emailService,
+        ILogger<CustomerService> logger)
     {
         _customerRepository = customerRepository;
         _vehicleRepository = vehicleRepository;
         _saleRepository = saleRepository;
         _appointmentRepository = appointmentRepository;
+        _identityService = identityService;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> CreateAsync(
@@ -47,9 +58,79 @@ public class CustomerService : ICustomerService
             return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
 
         var normalizedEmail = NormalizeEmail(request.Email);
-        var emailExists = await _customerRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
-        if (emailExists)
-            return ApiResponseFactory.FailConflict<CustomerResponseDto>("Email is already registered.");
+
+        var emailExistsInUsers = await _identityService.UserExistsByEmailAsync(normalizedEmail, null, cancellationToken);
+        if (emailExistsInUsers)
+            return ApiResponseFactory.FailConflict<CustomerResponseDto>("Email already exists as a user account.");
+
+        var emailExistsInCustomers = await _customerRepository.EmailExistsAsync(normalizedEmail, null, cancellationToken);
+        if (emailExistsInCustomers)
+            return ApiResponseFactory.FailConflict<CustomerResponseDto>("Customer with this email already exists.");
+
+        Guid? applicationUserId = null;
+        var message = "Customer created successfully.";
+
+        if (request.CreateLoginAccount)
+        {
+            var tempPassword = PasswordGenerator.Generate();
+
+            var (userCreated, userId, createError) = await _identityService.CreateUserAsync(
+                email: normalizedEmail,
+                password: tempPassword,
+                fullName: request.FullName.Trim(),
+                phone: NormalizeOptional(request.Phone),
+                address: NormalizeOptional(request.Address),
+                cancellationToken: cancellationToken);
+
+            if (!userCreated || userId is null)
+            {
+                _logger.LogError("Failed to create user account for customer {Email}: {Error}", normalizedEmail, createError);
+                return ApiResponseFactory.Fail<CustomerResponseDto>(createError ?? "Failed to create user account.");
+            }
+
+            applicationUserId = Guid.Parse(userId);
+
+            var roleExists = await _identityService.RoleExistsAsync(CustomerRole, cancellationToken);
+            if (!roleExists)
+            {
+                await _identityService.DeleteUserAsync(userId, cancellationToken);
+                return ApiResponseFactory.Fail<CustomerResponseDto>("Customer role is not configured.");
+            }
+
+            var (roleAssigned, roleError) = await _identityService.AssignRoleAsync(userId, CustomerRole, cancellationToken);
+            if (!roleAssigned)
+            {
+                await _identityService.DeleteUserAsync(userId, cancellationToken);
+                _logger.LogError("Failed to assign Customer role to user {UserId}: {Error}", userId, roleError);
+                return ApiResponseFactory.Fail<CustomerResponseDto>(roleError ?? "Failed to assign customer role.");
+            }
+
+            try
+            {
+                var emailBody = $@"
+                    <h2>Welcome to AutoFlow!</h2>
+                    <p>Hi {request.FullName},</p>
+                    <p>Your customer account has been created.</p>
+                    <p><strong>Login Email:</strong> {normalizedEmail}</p>
+                    <p><strong>Temporary Password:</strong> {tempPassword}</p>
+                    <p>Please log in and change your password after first login.</p>
+                    <p>Thank you,<br/>AutoFlow Team</p>
+                ";
+
+                await _emailService.SendAsync(
+                    normalizedEmail,
+                    "Your AutoFlow Customer Account",
+                    emailBody,
+                    cancellationToken);
+
+                message = "Customer account created successfully. Login details have been sent to the customer email.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send email to {Email}. Password is: {Password}", normalizedEmail, tempPassword);
+                message = "Customer account created successfully. Email sending failed - please notify customer of their temporary password.";
+            }
+        }
 
         var customer = new Customer
         {
@@ -57,13 +138,14 @@ public class CustomerService : ICustomerService
             Email = normalizedEmail,
             Phone = NormalizeOptional(request.Phone),
             Address = NormalizeOptional(request.Address),
+            ApplicationUserId = applicationUserId,
             CreatedAt = DateTime.UtcNow
         };
 
         await _customerRepository.AddAsync(customer, cancellationToken);
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Customer created successfully.", Map(customer));
+        return ApiResponseFactory.Ok(message, Map(customer));
     }
 
     public async Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(
@@ -210,7 +292,8 @@ public class CustomerService : ICustomerService
         Email = customer.Email,
         Phone = customer.Phone,
         Address = customer.Address,
-        CreatedAt = customer.CreatedAt
+        CreatedAt = customer.CreatedAt,
+        ApplicationUserId = customer.ApplicationUserId
     };
 
     private static VehicleResponseDto MapVehicle(Vehicle vehicle) => new()

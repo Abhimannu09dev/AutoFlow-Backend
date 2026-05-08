@@ -23,14 +23,18 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new customer
+    /// Create a new customer (with optional login account)
     /// </summary>
-    /// <param name="request">Customer details (FullName, Email, Phone, Address)</param>
+    /// <param name="request">Customer details including FullName, Email, Phone, Address, and optional CreateLoginAccount flag. When createLoginAccount is true, creates a linked user account and sends temporary password via email.</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Created customer details</returns>
+    /// <returns>Created customer details including ApplicationUserId when login account is created</returns>
+    /// <response code="200">Customer created successfully</response>
+    /// <response code="400">Validation error or creation failed</response>
+    /// <response code="409">Email already exists (as user account or customer)</response>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> Create(
         [FromBody] CustomerCreateDto request,
         CancellationToken cancellationToken)
