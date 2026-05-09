@@ -45,9 +45,13 @@ public class StaffService : IStaffService
         if (profileEmailExists)
             return ApiResponseFactory.FailConflict<StaffResponse>("Email is already registered.");
 
-        var roleExists = await _identityService.RoleExistsAsync(StaffRole, cancellationToken);
+        var role = string.IsNullOrWhiteSpace(request.Role) ? StaffRole : request.Role.Trim();
+        if (role != "Staff" && role != "Admin")
+            return ApiResponseFactory.Fail<StaffResponse>("Role must be either 'Staff' or 'Admin'.");
+
+        var roleExists = await _identityService.RoleExistsAsync(role, cancellationToken);
         if (!roleExists)
-            return ApiResponseFactory.Fail<StaffResponse>("Staff role is not configured.");
+            return ApiResponseFactory.Fail<StaffResponse>($"Role '{role}' is not configured.");
 
         var (createSucceeded, userId, createError) = await _identityService.CreateUserAsync(
             email: normalizedEmail,
@@ -60,11 +64,11 @@ public class StaffService : IStaffService
         if (!createSucceeded || userId is null)
             return ApiResponseFactory.Fail<StaffResponse>(createError ?? "Failed to create user account.");
 
-        var (assignSucceeded, assignError) = await _identityService.AssignRoleAsync(userId, StaffRole, cancellationToken);
+        var (assignSucceeded, assignError) = await _identityService.AssignRoleAsync(userId, role, cancellationToken);
         if (!assignSucceeded)
         {
             await _identityService.DeleteUserAsync(userId, cancellationToken);
-            return ApiResponseFactory.Fail<StaffResponse>(assignError ?? "Failed to assign staff role.");
+            return ApiResponseFactory.Fail<StaffResponse>(assignError ?? "Failed to assign role.");
         }
 
         var staffCode = await ResolveStaffCodeAsync(request.StaffCode, cancellationToken);
@@ -83,7 +87,7 @@ public class StaffService : IStaffService
             Email = normalizedEmail,
             PhoneNumber = NormalizeOptional(request.Phone),
             Address = NormalizeOptional(request.Address),
-            Position = NormalizeOptional(request.Position),
+            Position = role,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -227,7 +231,7 @@ public class StaffService : IStaffService
     {
         var errors = ValidateCommon(
             request.StaffCode, request.FullName,
-            request.Email, request.Phone, request.Address, request.Position);
+            request.Email, request.Phone, request.Address, null);
 
         if (string.IsNullOrWhiteSpace(request.Password))
             errors.Add("Password is required.");
