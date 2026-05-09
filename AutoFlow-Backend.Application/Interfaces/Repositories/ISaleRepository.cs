@@ -8,4 +8,5 @@ public interface ISaleRepository : IRepositoryBase<Sale>
     Task<Sale?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Sale?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<List<Sale>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
+    Task<Sale?> GetByIdForInvoiceAsync(Guid id, CancellationToken cancellationToken = default);
 }

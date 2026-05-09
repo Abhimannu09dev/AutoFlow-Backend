@@ -13,6 +13,7 @@ public class SaleRepository(AppDbContext context)
         return Context.Sales
             .AsNoTracking()
             .Include(s => s.Customer)
+            .Include(s => s.Staff)
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Part)
             .OrderByDescending(s => s.SaleDate)
@@ -24,6 +25,7 @@ public class SaleRepository(AppDbContext context)
         return Context.Sales
             .AsNoTracking()
             .Include(s => s.Customer)
+            .Include(s => s.Staff)
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Part)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
@@ -33,6 +35,7 @@ public class SaleRepository(AppDbContext context)
     {
         return Context.Sales
             .Include(s => s.Customer)
+            .Include(s => s.Staff)
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Part)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
@@ -43,10 +46,22 @@ public class SaleRepository(AppDbContext context)
         return Context.Sales
             .AsNoTracking()
             .Include(s => s.Customer)
+            .Include(s => s.Staff)
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Part)
             .Where(s => s.CustomerId == customerId)
             .OrderByDescending(s => s.SaleDate)
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<Sale?> GetByIdForInvoiceAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return Context.Sales
+            .AsNoTracking()
+            .Include(s => s.Customer)
+            .Include(s => s.Staff)
+            .Include(s => s.SaleItems)
+                .ThenInclude(si => si.Part)
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 }

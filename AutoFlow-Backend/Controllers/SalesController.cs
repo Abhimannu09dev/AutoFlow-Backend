@@ -24,15 +24,17 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Staff, Admin] Record a new sale transaction. Staff role requires an active Staff profile; Admin uses their user ID directly.
+    /// [Staff] Record a new sale transaction and auto-send a formal invoice to the customer. Requires an active Staff profile.
     /// </summary>
     /// <param name="request">Sale details (CustomerId, Items, PaymentMethod, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created sale with items</returns>
     [HttpPost]
+    [Authorize(Roles = "Staff")]
     [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create(
         [FromBody] CreateSaleRequest request,
         CancellationToken cancellationToken)
@@ -41,19 +43,16 @@ public class SalesController : ControllerBase
         if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var applicationUserId))
             return Unauthorized();
 
-        var staffId = User.IsInRole("Admin")
-            ? applicationUserId
-            : (await _staffRepository.GetActiveByApplicationUserIdAsync(applicationUserId, cancellationToken))?.Id;
-
-        if (staffId is null)
+        var staff = await _staffRepository.GetActiveByApplicationUserIdAsync(applicationUserId, cancellationToken);
+        if (staff is null)
             return Forbid();
 
-        var result = await _saleService.CreateAsync(request, staffId.Value, cancellationToken);
+        var result = await _saleService.CreateAsync(request, staff.Id, cancellationToken);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     /// <summary>
-    /// [Staff, Admin] Get all sales transactions
+    /// [Admin, Staff] Get all sales transactions
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all sales</returns>
@@ -66,7 +65,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Staff, Admin] Get a sale by its ID
+    /// [Admin, Staff] Get a sale by its ID
     /// </summary>
     /// <param name="id">Sale ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -81,7 +80,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Staff, Admin] Get all sales for a specific customer
+    /// [Admin, Staff] Get all sales for a specific customer
     /// </summary>
     /// <param name="customerId">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -91,6 +90,30 @@ public class SalesController : ControllerBase
     public async Task<IActionResult> GetByCustomerId(Guid customerId, CancellationToken cancellationToken)
     {
         var result = await _saleService.GetByCustomerIdAsync(customerId, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// [Staff, Admin] Send or resend a formal invoice email to the customer for a specific sale. Can be used to resend if the previous attempt failed.
+    /// </summary>
+    /// <param name="id">Sale ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Confirmation of invoice sent</returns>
+    [HttpPost("{id:guid}/send-invoice")]
+    [Authorize(Roles = "Staff,Admin")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendInvoice(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _saleService.SendInvoiceAsync(id, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+            return BadRequest(result);
+        }
         return Ok(result);
     }
 }
