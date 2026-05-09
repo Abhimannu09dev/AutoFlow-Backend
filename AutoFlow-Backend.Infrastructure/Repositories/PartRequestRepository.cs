@@ -14,4 +14,11 @@ public class PartRequestRepository : RepositoryBase<PartRequest>, IPartRequestRe
             .AsNoTracking()
             .OrderByDescending(pr => pr.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public async Task<List<PartRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default) =>
+        await Context.Set<PartRequest>()
+            .AsNoTracking()
+            .Where(pr => pr.CustomerId == customerId)
+            .OrderByDescending(pr => pr.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

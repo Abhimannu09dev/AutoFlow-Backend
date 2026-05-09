@@ -5,6 +5,14 @@ namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IPartRequestService
 {
-    Task<ApiResponse<PartRequestResponse>> CreateAsync(CreatePartRequestRequest request, CancellationToken cancellationToken = default);
-    Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<PartRequestResponse>> CreateAsync(
+        CreatePartRequestRequest request,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
 }

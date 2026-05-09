@@ -19,10 +19,14 @@ public class PartRequestsController : ControllerBase
         _partRequestService = partRequestService;
     }
 
+    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
+
+    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
+
     /// <summary>
     /// [Customer, Staff, Admin] Create a part request for items not in inventory. Customers request for themselves; Staff/Admin can request for any customer.
     /// </summary>
-    /// <param name="request">Part request details (CustomerId, PartName, Quantity)</param>
+    /// <param name="request">Part request details (CustomerId optional for customers, PartName, Quantity)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created part request details</returns>
     [HttpPost]
@@ -32,23 +36,32 @@ public class PartRequestsController : ControllerBase
         [FromBody] CreatePartRequestRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _partRequestService.CreateAsync(request, cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _partRequestService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
             return BadRequest(response);
+
         return Ok(response);
     }
 
     /// <summary>
-    /// [Customer, Staff, Admin] Get all part requests. Customers see only their own; Staff/Admin see all.
+    /// [Customer, Staff, Admin] Get part requests. Customers see only their own; Staff/Admin see all.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all part requests</returns>
+    /// <returns>List of part requests</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<PartRequestResponse>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<PartRequestResponse>>>> GetAll(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<List<PartRequestResponse>>>> GetAll(CancellationToken cancellationToken)
     {
-        var response = await _partRequestService.GetAllAsync(cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _partRequestService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
+
         return Ok(response);
     }
 }
