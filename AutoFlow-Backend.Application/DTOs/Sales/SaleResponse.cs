@@ -8,6 +8,7 @@ namespace AutoFlow_Backend.Application.DTOs.Sales
     public class SaleResponse
     {
         public Guid Id { get; set; }
+        public string InvoiceNumber { get; set; } = string.Empty;
         public Guid CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public Guid StaffId { get; set; }
@@ -19,6 +20,7 @@ namespace AutoFlow_Backend.Application.DTOs.Sales
         public PaymentMethod PaymentMethod { get; set; }
         public SaleStatus Status { get; set; }
         public string? Notes { get; set; }
+        public DateTime? InvoiceSentAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<SaleItemResponse> Items { get; set; } = new();
     }

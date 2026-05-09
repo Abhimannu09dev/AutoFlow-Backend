@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 
 [ApiController]
 [Route("api/sales")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Staff")]
 [Tags("Sales")]
 public class SalesController : ControllerBase
 {
@@ -24,7 +24,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Staff] Record a new sale transaction. Requires an active Staff profile to create sales.
+    /// [Staff] Record a new sale transaction and auto-send a formal invoice to the customer. Requires an active Staff profile.
     /// </summary>
     /// <param name="request">Sale details (CustomerId, Items, PaymentMethod, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -52,7 +52,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Admin] Get all sales transactions
+    /// [Admin, Staff] Get all sales transactions
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all sales</returns>
@@ -65,7 +65,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Admin] Get a sale by its ID
+    /// [Admin, Staff] Get a sale by its ID
     /// </summary>
     /// <param name="id">Sale ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -80,7 +80,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Admin] Get all sales for a specific customer
+    /// [Admin, Staff] Get all sales for a specific customer
     /// </summary>
     /// <param name="customerId">Customer ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -90,6 +90,30 @@ public class SalesController : ControllerBase
     public async Task<IActionResult> GetByCustomerId(Guid customerId, CancellationToken cancellationToken)
     {
         var result = await _saleService.GetByCustomerIdAsync(customerId, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// [Staff, Admin] Send or resend a formal invoice email to the customer for a specific sale. Can be used to resend if the previous attempt failed.
+    /// </summary>
+    /// <param name="id">Sale ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Confirmation of invoice sent</returns>
+    [HttpPost("{id:guid}/send-invoice")]
+    [Authorize(Roles = "Staff,Admin")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendInvoice(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _saleService.SendInvoiceAsync(id, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(result);
+            return BadRequest(result);
+        }
         return Ok(result);
     }
 }

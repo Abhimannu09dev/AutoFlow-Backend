@@ -141,7 +141,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                   .WithMany()
                   .HasForeignKey(s => s.CustomerId)
                   .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Staff>()
+            entity.HasOne(s => s.Staff)
                   .WithMany()
                   .HasForeignKey(s => s.StaffId)
                   .OnDelete(DeleteBehavior.Restrict);
