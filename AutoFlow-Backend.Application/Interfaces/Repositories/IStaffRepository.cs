@@ -10,4 +10,5 @@ public interface IStaffRepository : IRepositoryBase<Staff>
     Task<Staff?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Staff?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Staff?> GetByApplicationUserIdAsync(Guid applicationUserId, CancellationToken cancellationToken = default);
+    Task<Staff?> GetActiveByApplicationUserIdAsync(Guid applicationUserId, CancellationToken cancellationToken = default);
 }

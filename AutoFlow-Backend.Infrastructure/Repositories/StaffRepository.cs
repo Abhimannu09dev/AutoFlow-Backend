@@ -59,4 +59,11 @@ public class StaffRepository(AppDbContext context)
             .AsNoTracking()
             .FirstOrDefaultAsync(staff => staff.ApplicationUserId == applicationUserId, cancellationToken);
     }
+
+    public Task<Staff?> GetActiveByApplicationUserIdAsync(Guid applicationUserId, CancellationToken cancellationToken = default)
+    {
+        return Context.Staff
+            .AsNoTracking()
+            .FirstOrDefaultAsync(staff => staff.ApplicationUserId == applicationUserId && staff.IsActive, cancellationToken);
+    }
 }
