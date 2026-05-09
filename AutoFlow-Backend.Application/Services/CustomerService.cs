@@ -145,6 +145,49 @@ public class CustomerService : ICustomerService
         await _customerRepository.AddAsync(customer, cancellationToken);
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
+        if (request.Vehicle is not null && applicationUserId.HasValue)
+        {
+            try
+            {
+                var vehicleErrors = ValidateVehicle(
+                    request.Vehicle.VehicleNumber, request.Vehicle.Brand, request.Vehicle.Model,
+                    request.Vehicle.Year, request.Vehicle.Color, request.Vehicle.VIN);
+
+                if (vehicleErrors.Count > 0)
+                {
+                    message += " Vehicle creation skipped: " + string.Join("; ", vehicleErrors);
+                }
+                else
+                {
+                    var vehicle = new Vehicle
+                    {
+                        VehicleNumber = NormalizeVehicleNumber(request.Vehicle.VehicleNumber),
+                        Brand = request.Vehicle.Brand.Trim(),
+                        Model = request.Vehicle.Model.Trim(),
+                        Year = request.Vehicle.Year,
+                        Mileage = request.Vehicle.Mileage,
+                        Color = NormalizeOptional(request.Vehicle.Color),
+                        VIN = NormalizeOptional(request.Vehicle.VIN),
+                        UserId = applicationUserId.Value,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _vehicleRepository.AddAsync(vehicle, cancellationToken);
+                    await _vehicleRepository.SaveChangesAsync(cancellationToken);
+                    message += " Vehicle created successfully.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create vehicle for customer {CustomerId}", customer.Id);
+                message += " Vehicle creation failed.";
+            }
+        }
+        else if (request.Vehicle is not null && !applicationUserId.HasValue)
+        {
+            message += " Vehicle not created: Customer does not have a linked user account.";
+        }
+
         return ApiResponseFactory.Ok(message, Map(customer));
     }
 

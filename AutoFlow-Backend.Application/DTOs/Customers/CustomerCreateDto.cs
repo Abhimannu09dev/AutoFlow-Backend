@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using AutoFlow_Backend.Application.DTOs.Vehicles;
 
 namespace AutoFlow_Backend.Application.DTOs.Customers;
 
@@ -35,4 +36,9 @@ public class CustomerCreateDto
     /// When true, creates a linked login account and sends temporary password via email
     /// </summary>
     public bool CreateLoginAccount { get; set; } = false;
+
+    /// <summary>
+    /// Vehicle details to create for this customer (optional)
+    /// </summary>
+    public VehicleCreateDto? Vehicle { get; set; }
 }
