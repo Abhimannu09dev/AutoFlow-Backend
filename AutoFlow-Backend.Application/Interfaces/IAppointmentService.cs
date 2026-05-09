@@ -5,7 +5,20 @@ namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IAppointmentService
 {
-    Task<ApiResponse<AppointmentResponse>> CreateAsync(CreateAppointmentRequest request, CancellationToken cancellationToken = default);
-    Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<ApiResponse<AppointmentResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApiResponse<AppointmentResponse>> CreateAsync(
+        CreateAppointmentRequest request,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<AppointmentResponse>> GetByIdAsync(
+        Guid id,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
 }
