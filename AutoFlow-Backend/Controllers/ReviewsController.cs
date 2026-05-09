@@ -19,10 +19,14 @@ public class ReviewsController : ControllerBase
         _reviewService = reviewService;
     }
 
+    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
+
+    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
+
     /// <summary>
-    /// [Customer, Staff, Admin] Create a new customer review. Customers can review their own service experience.
+    /// [Customer, Staff, Admin] Create a new customer review. Customers review for themselves; Staff/Admin can review for any customer.
     /// </summary>
-    /// <param name="request">Review details (CustomerId, Rating 1-5, Comment)</param>
+    /// <param name="request">Review details (CustomerId optional for customers, Rating 1-5, Comment)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created review details</returns>
     [HttpPost]
@@ -32,21 +36,24 @@ public class ReviewsController : ControllerBase
         [FromBody] CreateReviewRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _reviewService.CreateAsync(request, cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _reviewService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
             return BadRequest(response);
+
         return Ok(response);
     }
 
     /// <summary>
-    /// [Customer, Staff, Admin] Get all customer reviews. Staff/Admin see all reviews.
+    /// [Customer, Staff, Admin] Get all customer reviews. Everyone can see all reviews.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of all customer reviews</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<ReviewResponse>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<ReviewResponse>>>> GetAll(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<List<ReviewResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _reviewService.GetAllAsync(cancellationToken);
         return Ok(response);

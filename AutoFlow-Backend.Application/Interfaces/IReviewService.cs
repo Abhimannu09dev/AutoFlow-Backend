@@ -5,6 +5,11 @@ namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IReviewService
 {
-    Task<ApiResponse<ReviewResponse>> CreateAsync(CreateReviewRequest request, CancellationToken cancellationToken = default);
+    Task<ApiResponse<ReviewResponse>> CreateAsync(
+        CreateReviewRequest request,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(CancellationToken cancellationToken = default);
 }

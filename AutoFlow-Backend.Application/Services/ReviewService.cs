@@ -9,23 +9,47 @@ namespace AutoFlow_Backend.Application.Services;
 public class ReviewService : IReviewService
 {
     private readonly IReviewRepository _reviewRepository;
+    private readonly ICustomerRepository _customerRepository;
 
-    public ReviewService(IReviewRepository reviewRepository)
+    public ReviewService(
+        IReviewRepository reviewRepository,
+        ICustomerRepository customerRepository)
     {
         _reviewRepository = reviewRepository;
+        _customerRepository = customerRepository;
     }
 
     public async Task<ApiResponse<ReviewResponse>> CreateAsync(
         CreateReviewRequest request,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        if (request.CustomerId == Guid.Empty)
-            return ApiResponseFactory.Fail<ReviewResponse>("CustomerId is required.");
+        if (request.Rating < 1 || request.Rating > 5)
+            return ApiResponseFactory.Fail<ReviewResponse>("Rating must be between 1 and 5.");
+
+        Guid customerId;
+
+        if (isStaffOrAdmin && request.CustomerId.HasValue)
+        {
+            customerId = request.CustomerId.Value;
+        }
+        else if (requestingUserId.HasValue)
+        {
+            var customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
+            if (customer is null)
+                return ApiResponseFactory.Fail<ReviewResponse>("Customer profile not found. Please contact support.");
+            customerId = customer.Id;
+        }
+        else
+        {
+            return ApiResponseFactory.Fail<ReviewResponse>("Unable to determine customer.");
+        }
 
         var review = new Review
         {
             Id = Guid.NewGuid(),
-            CustomerId = request.CustomerId,
+            CustomerId = customerId,
             Rating = request.Rating,
             Comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -37,8 +61,7 @@ public class ReviewService : IReviewService
         return ApiResponseFactory.Ok("Review created successfully.", Map(review));
     }
 
-    public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var results = await _reviewRepository.GetAllAsync(cancellationToken);
         return ApiResponseFactory.Ok("Reviews retrieved successfully.", results.Select(Map).ToList());
