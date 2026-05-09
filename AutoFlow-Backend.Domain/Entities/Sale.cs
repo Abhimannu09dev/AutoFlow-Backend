@@ -17,6 +17,8 @@ public class Sale
     public string? Notes { get; set; }
     public DateTime? InvoiceSentAt { get; set; }
     public string? InvoiceEmail { get; set; }
+    public DateTime? InvoiceFailedAt { get; set; }
+    public string? InvoiceFailureReason { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public Customer? Customer { get; set; }

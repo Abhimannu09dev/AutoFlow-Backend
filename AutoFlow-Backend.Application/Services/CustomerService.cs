@@ -16,36 +16,30 @@ public class CustomerService : ICustomerService
     private const int EmailMaxLength = 200;
     private const int PhoneMaxLength = 30;
     private const int AddressMaxLength = 300;
-    private const int VehicleNumberMaxLength = 20;
-    private const int VehicleBrandMaxLength = 50;
-    private const int VehicleModelMaxLength = 50;
-    private const int VehicleColorMaxLength = 30;
-    private const int VehicleVinMaxLength = 50;
-    private const string CustomerRole = "Customer";
 
     private readonly ICustomerRepository _customerRepository;
-    private readonly IVehicleRepository _vehicleRepository;
+    private readonly IVehicleService _vehicleService;
     private readonly ISaleRepository _saleRepository;
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly IIdentityService _identityService;
-    private readonly IEmailService _emailService;
+    private readonly ICustomerAccountService _customerAccountService;
     private readonly ILogger<CustomerService> _logger;
 
     public CustomerService(
         ICustomerRepository customerRepository,
-        IVehicleRepository vehicleRepository,
+        IVehicleService vehicleService,
         ISaleRepository saleRepository,
         IAppointmentRepository appointmentRepository,
         IIdentityService identityService,
-        IEmailService emailService,
+        ICustomerAccountService customerAccountService,
         ILogger<CustomerService> logger)
     {
         _customerRepository = customerRepository;
-        _vehicleRepository = vehicleRepository;
+        _vehicleService = vehicleService;
         _saleRepository = saleRepository;
         _appointmentRepository = appointmentRepository;
         _identityService = identityService;
-        _emailService = emailService;
+        _customerAccountService = customerAccountService;
         _logger = logger;
     }
 
@@ -72,64 +66,18 @@ public class CustomerService : ICustomerService
 
         if (request.CreateLoginAccount)
         {
-            var tempPassword = PasswordGenerator.Generate();
+            var provisionResult = await _customerAccountService.ProvisionAsync(
+                request.FullName.Trim(),
+                normalizedEmail,
+                NormalizeOptional(request.Phone),
+                NormalizeOptional(request.Address),
+                cancellationToken);
 
-            var (userCreated, userId, createError) = await _identityService.CreateUserAsync(
-                email: normalizedEmail,
-                password: tempPassword,
-                fullName: request.FullName.Trim(),
-                phone: NormalizeOptional(request.Phone),
-                address: NormalizeOptional(request.Address),
-                cancellationToken: cancellationToken);
+            if (!provisionResult.IsSuccess)
+                return ApiResponseFactory.Fail<CustomerResponseDto>(provisionResult.Message);
 
-            if (!userCreated || userId is null)
-            {
-                _logger.LogError("Failed to create user account for customer {Email}: {Error}", normalizedEmail, createError);
-                return ApiResponseFactory.Fail<CustomerResponseDto>(createError ?? "Failed to create user account.");
-            }
-
-            applicationUserId = Guid.Parse(userId);
-
-            var roleExists = await _identityService.RoleExistsAsync(CustomerRole, cancellationToken);
-            if (!roleExists)
-            {
-                await _identityService.DeleteUserAsync(userId, cancellationToken);
-                return ApiResponseFactory.Fail<CustomerResponseDto>("Customer role is not configured.");
-            }
-
-            var (roleAssigned, roleError) = await _identityService.AssignRoleAsync(userId, CustomerRole, cancellationToken);
-            if (!roleAssigned)
-            {
-                await _identityService.DeleteUserAsync(userId, cancellationToken);
-                _logger.LogError("Failed to assign Customer role to user {UserId}: {Error}", userId, roleError);
-                return ApiResponseFactory.Fail<CustomerResponseDto>(roleError ?? "Failed to assign customer role.");
-            }
-
-            try
-            {
-                var emailBody = $@"
-                    <h2>Welcome to AutoFlow!</h2>
-                    <p>Hi {request.FullName},</p>
-                    <p>Your customer account has been created.</p>
-                    <p><strong>Login Email:</strong> {normalizedEmail}</p>
-                    <p><strong>Temporary Password:</strong> {tempPassword}</p>
-                    <p>Please log in and change your password after first login.</p>
-                    <p>Thank you,<br/>AutoFlow Team</p>
-                ";
-
-                await _emailService.SendAsync(
-                    normalizedEmail,
-                    "Your AutoFlow Customer Account",
-                    emailBody,
-                    cancellationToken);
-
-                message = "Customer account created successfully. Login details have been sent to the customer email.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to send email to {Email}. Password is: {Password}", normalizedEmail, tempPassword);
-                message = "Customer account created successfully. Email sending failed - please notify customer of their temporary password.";
-            }
+            applicationUserId = provisionResult.Data!.ApplicationUserId;
+            message = provisionResult.Data.WelcomeMessage;
         }
 
         var customer = new Customer
@@ -147,40 +95,19 @@ public class CustomerService : ICustomerService
 
         if (request.Vehicle is not null && applicationUserId.HasValue)
         {
-            try
+            var vehicleResponse = await _vehicleService.CreateAsync(
+                request.Vehicle,
+                creatorUserId: applicationUserId,
+                isStaffOrAdmin: false,
+                cancellationToken);
+
+            if (vehicleResponse.IsSuccess)
             {
-                var vehicleErrors = ValidateVehicle(
-                    request.Vehicle.VehicleNumber, request.Vehicle.Brand, request.Vehicle.Model,
-                    request.Vehicle.Year, request.Vehicle.Color, request.Vehicle.VIN);
-
-                if (vehicleErrors.Count > 0)
-                {
-                    message += " Vehicle creation skipped: " + string.Join("; ", vehicleErrors);
-                }
-                else
-                {
-                    var vehicle = new Vehicle
-                    {
-                        VehicleNumber = NormalizeVehicleNumber(request.Vehicle.VehicleNumber),
-                        Brand = request.Vehicle.Brand.Trim(),
-                        Model = request.Vehicle.Model.Trim(),
-                        Year = request.Vehicle.Year,
-                        Mileage = request.Vehicle.Mileage,
-                        Color = NormalizeOptional(request.Vehicle.Color),
-                        VIN = NormalizeOptional(request.Vehicle.VIN),
-                        UserId = applicationUserId.Value,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _vehicleRepository.AddAsync(vehicle, cancellationToken);
-                    await _vehicleRepository.SaveChangesAsync(cancellationToken);
-                    message += " Vehicle created successfully.";
-                }
+                message += " Vehicle created successfully.";
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning(ex, "Failed to create vehicle for customer {CustomerId}", customer.Id);
-                message += " Vehicle creation failed.";
+                message += " Vehicle creation skipped: " + vehicleResponse.Message;
             }
         }
         else if (request.Vehicle is not null && !applicationUserId.HasValue)
@@ -249,7 +176,7 @@ public class CustomerService : ICustomerService
         var normalizedLower = query.Trim().ToLowerInvariant();
         var customerIdMatch = Guid.TryParse(query.Trim(), out var parsedId) ? parsedId : (Guid?)null;
 
-        var matchingUserIds = await _vehicleRepository.GetUserIdsByVehicleQueryAsync(normalizedLower, cancellationToken);
+        var matchingUserIds = await _vehicleService.GetUserIdsBySearchQueryAsync(normalizedLower, cancellationToken);
         var customers = await _customerRepository.SearchAsync(normalizedLower, matchingUserIds, customerIdMatch, cancellationToken);
 
         return ApiResponseFactory.Ok("Customers searched successfully.", customers.Select(Map).ToList());
@@ -279,78 +206,11 @@ public class CustomerService : ICustomerService
         return ApiResponseFactory.Ok("Customer services retrieved successfully.", services.Select(MapAppointment).ToList());
     }
 
-    public async Task<ApiResponse<List<SaleResponse>>> GetMyPurchasesAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
-        if (customer is null)
-            return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer profile not found.");
-
-        var purchases = await _saleRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
-        return ApiResponseFactory.Ok("Your purchase history retrieved successfully.", purchases.Select(MapSale).ToList());
-    }
-
-    public async Task<ApiResponse<List<AppointmentResponse>>> GetMyServicesAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
-        if (customer is null)
-            return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer profile not found.");
-
-        var services = await _appointmentRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
-        return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(MapAppointment).ToList());
-    }
-
-    public async Task<ApiResponse<CustomerResponseDto>> GetMyProfileAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
-        if (customer is null)
-            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
-
-        return ApiResponseFactory.Ok("Profile retrieved successfully.", Map(customer));
-    }
-
-    public async Task<ApiResponse<CustomerResponseDto>> UpdateMyProfileAsync(
-        Guid userId,
-        CustomerPatchDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var validationErrors = ValidatePatch(request);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
-
-        var customer = await _customerRepository.GetByApplicationUserIdForUpdateAsync(userId, cancellationToken);
-        if (customer is null)
-            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
-
-        if (!string.IsNullOrWhiteSpace(request.FullName))
-            customer.FullName = request.FullName.Trim();
-
-        if (request.Phone is not null)
-            customer.Phone = NormalizeOptional(request.Phone);
-
-        if (request.Address is not null)
-            customer.Address = NormalizeOptional(request.Address);
-
-        _customerRepository.Update(customer);
-        await _customerRepository.SaveChangesAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Profile updated successfully.", Map(customer));
-    }
-
     public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
         Guid customerId,
         VehicleCreateDto request,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = ValidateVehicle(request.VehicleNumber, request.Brand, request.Model, request.Year, request.Color, request.VIN);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(validationErrors);
-
         var customer = await _customerRepository.GetByIdAsync(customerId, cancellationToken);
         if (customer is null)
             return ApiResponseFactory.FailNotFound<VehicleResponseDto>("Customer not found.");
@@ -358,22 +218,9 @@ public class CustomerService : ICustomerService
         if (customer.ApplicationUserId is null)
             return ApiResponseFactory.Fail<VehicleResponseDto>("Customer is not linked to a user account.");
 
-        var vehicle = new Vehicle
-        {
-            VehicleNumber = NormalizeVehicleNumber(request.VehicleNumber),
-            Brand = request.Brand.Trim(),
-            Model = request.Model.Trim(),
-            Year = request.Year,
-            Color = NormalizeOptional(request.Color),
-            VIN = NormalizeOptional(request.VIN),
-            UserId = customer.ApplicationUserId.Value,
-            CreatedAt = DateTime.UtcNow
-        };
+        request.OwnerUserId = customer.ApplicationUserId;
 
-        await _vehicleRepository.AddAsync(vehicle, cancellationToken);
-        await _vehicleRepository.SaveChangesAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Vehicle added successfully.", MapVehicle(vehicle));
+        return await _vehicleService.CreateAsync(request, creatorUserId: null, isStaffOrAdmin: true, cancellationToken);
     }
 
     public async Task<ApiResponse<List<VehicleResponseDto>>> GetVehiclesAsync(
@@ -387,8 +234,7 @@ public class CustomerService : ICustomerService
         if (customer.ApplicationUserId is null)
             return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Customer is not linked to a user account.");
 
-        var vehicles = await _vehicleRepository.GetByUserIdAsync(customer.ApplicationUserId.Value, cancellationToken);
-        return ApiResponseFactory.Ok("Customer vehicles retrieved successfully.", vehicles.Select(MapVehicle).ToList());
+        return await _vehicleService.GetMyVehiclesAsync(customer.ApplicationUserId.Value, cancellationToken);
     }
 
     private static CustomerResponseDto Map(Customer customer) => new()
@@ -400,20 +246,6 @@ public class CustomerService : ICustomerService
         Address = customer.Address,
         CreatedAt = customer.CreatedAt,
         ApplicationUserId = customer.ApplicationUserId
-    };
-
-    private static VehicleResponseDto MapVehicle(Vehicle vehicle) => new()
-    {
-        Id = vehicle.Id,
-        VehicleNumber = vehicle.VehicleNumber,
-        Brand = vehicle.Brand,
-        Model = vehicle.Model,
-        Year = vehicle.Year,
-        Color = vehicle.Color,
-        VIN = vehicle.VIN,
-        UserId = vehicle.UserId,
-        CreatedAt = vehicle.CreatedAt,
-        UpdatedAt = vehicle.UpdatedAt
     };
 
     private static SaleResponse MapSale(Sale sale) => new()
@@ -448,7 +280,7 @@ public class CustomerService : ICustomerService
         CustomerId = appointment.CustomerId,
         Date = appointment.Date,
         Time = appointment.Time,
-        Status = appointment.Status.ToString(),
+        Status = appointment.Status,
         CreatedAt = appointment.CreatedAt,
         UpdatedAt = appointment.UpdatedAt
     };
@@ -488,40 +320,6 @@ public class CustomerService : ICustomerService
 
         if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
             errors.Add($"Address must be at most {AddressMaxLength} characters.");
-
-        return errors;
-    }
-
-    private static List<string> ValidateVehicle(
-        string? vehicleNumber, string? brand, string? model,
-        int year, string? color, string? vin)
-    {
-        var errors = new List<string>();
-        var currentYear = DateTime.UtcNow.Year;
-
-        if (string.IsNullOrWhiteSpace(vehicleNumber))
-            errors.Add("Vehicle number is required.");
-        else if (vehicleNumber.Trim().Length > VehicleNumberMaxLength)
-            errors.Add($"Vehicle number must be at most {VehicleNumberMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(brand))
-            errors.Add("Brand is required.");
-        else if (brand.Trim().Length > VehicleBrandMaxLength)
-            errors.Add($"Brand must be at most {VehicleBrandMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(model))
-            errors.Add("Model is required.");
-        else if (model.Trim().Length > VehicleModelMaxLength)
-            errors.Add($"Model must be at most {VehicleModelMaxLength} characters.");
-
-        if (year < 1886 || year > currentYear + 1)
-            errors.Add($"Year must be between 1886 and {currentYear + 1}.");
-
-        if (!string.IsNullOrWhiteSpace(color) && color.Trim().Length > VehicleColorMaxLength)
-            errors.Add($"Color must be at most {VehicleColorMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(vin) && vin.Trim().Length > VehicleVinMaxLength)
-            errors.Add($"VIN must be at most {VehicleVinMaxLength} characters.");
 
         return errors;
     }

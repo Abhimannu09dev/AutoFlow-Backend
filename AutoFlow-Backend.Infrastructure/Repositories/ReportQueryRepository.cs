@@ -1,4 +1,5 @@
 ﻿using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Models;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
 using AutoFlow_Backend.Infrastructure.Data;
@@ -43,7 +44,7 @@ public class ReportQueryRepository : IReportQueryRepository
             .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.Status == SaleStatus.Completed)
             .ToListAsync(cancellationToken);
 
-    public async Task<List<(Guid CustomerId, string FullName, string Email, string? Phone, string? Address, int PurchaseCount, decimal TotalSpent, DateTime LastPurchaseDate)>>
+    public async Task<List<CustomerSummaryResult>>
         GetTopSpendersAsync(CancellationToken cancellationToken = default)
     {
         return await (from sale in _dbContext.Sales.AsNoTracking()
@@ -59,7 +60,7 @@ public class ReportQueryRepository : IReportQueryRepository
                       }
                       into grouped
                       orderby grouped.Sum(x => x.sale.TotalAmount) descending
-                      select ValueTuple.Create(
+                      select new CustomerSummaryResult(
                           grouped.Key.Id,
                           grouped.Key.FullName,
                           grouped.Key.Email,
@@ -71,7 +72,7 @@ public class ReportQueryRepository : IReportQueryRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<(Guid CustomerId, string FullName, string Email, string? Phone, string? Address, int PurchaseCount, decimal TotalSpent, DateTime LastPurchaseDate)>>
+    public async Task<List<CustomerSummaryResult>>
         GetRegularCustomersAsync(int minimumPurchaseCount, CancellationToken cancellationToken = default)
     {
         return await (from sale in _dbContext.Sales.AsNoTracking()
@@ -88,7 +89,7 @@ public class ReportQueryRepository : IReportQueryRepository
                       into grouped
                       where grouped.Count() > minimumPurchaseCount
                       orderby grouped.Count() descending, grouped.Sum(x => x.sale.TotalAmount) descending
-                      select ValueTuple.Create(
+                      select new CustomerSummaryResult(
                           grouped.Key.Id,
                           grouped.Key.FullName,
                           grouped.Key.Email,

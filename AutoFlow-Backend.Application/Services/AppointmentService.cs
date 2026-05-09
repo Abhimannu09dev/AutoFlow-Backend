@@ -117,7 +117,7 @@ public class AppointmentService : IAppointmentService
         CustomerId = a.CustomerId,
         Date = a.Date,
         Time = a.Time,
-        Status = a.Status.ToString(),
+        Status = a.Status,
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt
     };

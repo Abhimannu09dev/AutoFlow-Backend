@@ -190,6 +190,14 @@ public class StaffService : IStaffService
         return ApiResponseFactory.Ok("Staff deactivated successfully.", true);
     }
 
+    public async Task<Guid?> GetStaffIdByApplicationUserIdAsync(
+        Guid applicationUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var staff = await _staffRepository.GetActiveByApplicationUserIdAsync(applicationUserId, cancellationToken);
+        return staff?.Id;
+    }
+
     private async Task<string?> ResolveStaffCodeAsync(
         string? requestedCode,
         CancellationToken cancellationToken)

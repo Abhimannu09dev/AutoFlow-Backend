@@ -13,7 +13,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/customers")]
 [Authorize(Roles = "Admin,Staff")]
 [Tags("Customers")]
-public class CustomersController : ControllerBase
+public class CustomersController : BaseController
 {
     private readonly ICustomerService _customerService;
 
@@ -81,7 +81,7 @@ public class CustomersController : ControllerBase
         var response = await _customerService.GetPurchasesAsync(id, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -107,7 +107,7 @@ public class CustomersController : ControllerBase
         var response = await _customerService.GetServicesAsync(id, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -174,7 +174,7 @@ public class CustomersController : ControllerBase
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -202,7 +202,7 @@ public class CustomersController : ControllerBase
         var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -228,7 +228,7 @@ public class CustomersController : ControllerBase
         var response = await _customerService.GetVehiclesAsync(id, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -236,24 +236,20 @@ public class CustomersController : ControllerBase
 
         return Ok(response);
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
 }
 
 [ApiController]
 [Route("api/customers/me")]
 [Authorize(Roles = "Customer")]
 [Tags("Customer Self-Service")]
-public class CustomerHistoryController : ControllerBase
+public class CustomerHistoryController : BaseController
 {
-    private readonly ICustomerService _customerService;
+    private readonly ICustomerSelfService _customerSelfService;
 
-    public CustomerHistoryController(ICustomerService customerService)
+    public CustomerHistoryController(ICustomerSelfService customerSelfService)
     {
-        _customerService = customerService;
+        _customerSelfService = customerSelfService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
 
     /// <summary>
     /// [Customer] Get your own purchase history
@@ -269,7 +265,7 @@ public class CustomerHistoryController : ControllerBase
         if (userId is null)
             return Unauthorized(ApiResponseFactory.Fail<List<SaleResponse>>("Invalid user token."));
 
-        var response = await _customerService.GetMyPurchasesAsync(userId.Value, cancellationToken);
+        var response = await _customerSelfService.GetMyPurchasesAsync(userId.Value, cancellationToken);
         if (!response.IsSuccess)
             return NotFound(response);
 
@@ -290,7 +286,7 @@ public class CustomerHistoryController : ControllerBase
         if (userId is null)
             return Unauthorized(ApiResponseFactory.Fail<List<AppointmentResponse>>("Invalid user token."));
 
-        var response = await _customerService.GetMyServicesAsync(userId.Value, cancellationToken);
+        var response = await _customerSelfService.GetMyServicesAsync(userId.Value, cancellationToken);
         if (!response.IsSuccess)
             return NotFound(response);
 
@@ -311,7 +307,7 @@ public class CustomerHistoryController : ControllerBase
         if (userId is null)
             return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
 
-        var response = await _customerService.GetMyProfileAsync(userId.Value, cancellationToken);
+        var response = await _customerSelfService.GetMyProfileAsync(userId.Value, cancellationToken);
         if (!response.IsSuccess)
             return NotFound(response);
 
@@ -336,10 +332,10 @@ public class CustomerHistoryController : ControllerBase
         if (userId is null)
             return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
 
-        var response = await _customerService.UpdateMyProfileAsync(userId.Value, request, cancellationToken);
+        var response = await _customerSelfService.UpdateMyProfileAsync(userId.Value, request, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);

@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/part-requests")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Part Requests")]
-public class PartRequestsController : ControllerBase
+public class PartRequestsController : BaseController
 {
     private readonly IPartRequestService _partRequestService;
 
@@ -18,10 +18,6 @@ public class PartRequestsController : ControllerBase
     {
         _partRequestService = partRequestService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a part request for items not in inventory. Customers request for themselves; Staff/Admin can request for any customer.

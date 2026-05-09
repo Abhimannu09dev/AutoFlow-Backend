@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/appointments")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Appointments")]
-public class AppointmentsController : ControllerBase
+public class AppointmentsController : BaseController
 {
     private readonly IAppointmentService _appointmentService;
 
@@ -18,10 +18,6 @@ public class AppointmentsController : ControllerBase
     {
         _appointmentService = appointmentService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a new appointment. Customers create for themselves; Staff/Admin can create for any customer.

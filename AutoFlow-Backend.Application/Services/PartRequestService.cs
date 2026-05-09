@@ -100,7 +100,7 @@ public class PartRequestService : IPartRequestService
         CustomerId = pr.CustomerId,
         PartName = pr.PartName,
         Quantity = pr.Quantity,
-        Status = pr.Status.ToString(),
+        Status = pr.Status,
         CreatedAt = pr.CreatedAt,
         UpdatedAt = pr.UpdatedAt
     };

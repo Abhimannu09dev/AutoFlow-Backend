@@ -1,4 +1,5 @@
-﻿using AutoFlow_Backend.Domain.Entities;
+﻿using AutoFlow_Backend.Application.Models;
+using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Interfaces.Repositories;
 
@@ -15,11 +16,9 @@ public interface IReportQueryRepository
         DateTime end,
         CancellationToken cancellationToken = default);
 
-    Task<List<(Guid CustomerId, string FullName, string Email, string? Phone, string? Address, int PurchaseCount, decimal TotalSpent, DateTime LastPurchaseDate)>>
-        GetTopSpendersAsync(CancellationToken cancellationToken = default);
+    Task<List<CustomerSummaryResult>> GetTopSpendersAsync(CancellationToken cancellationToken = default);
 
-    Task<List<(Guid CustomerId, string FullName, string Email, string? Phone, string? Address, int PurchaseCount, decimal TotalSpent, DateTime LastPurchaseDate)>>
-        GetRegularCustomersAsync(int minimumPurchaseCount, CancellationToken cancellationToken = default);
+    Task<List<CustomerSummaryResult>> GetRegularCustomersAsync(int minimumPurchaseCount, CancellationToken cancellationToken = default);
 
     Task<List<Sale>> GetOverdueCreditSalesAsync(DateTime cutoffDate, CancellationToken cancellationToken = default);
 }

@@ -12,10 +12,6 @@ public interface ICustomerService
     Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(Guid customerId, CancellationToken cancellationToken = default);
-    Task<ApiResponse<List<SaleResponse>>> GetMyPurchasesAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<ApiResponse<List<AppointmentResponse>>> GetMyServicesAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<ApiResponse<CustomerResponseDto>> GetMyProfileAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<ApiResponse<CustomerResponseDto>> UpdateMyProfileAsync(Guid userId, CustomerPatchDto request, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(string query, CancellationToken cancellationToken = default);
     Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<CustomerResponseDto>> UpdateAsync(Guid id, CustomerUpdateDto request, CancellationToken cancellationToken = default);

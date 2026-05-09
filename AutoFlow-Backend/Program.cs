@@ -1,15 +1,11 @@
 using AutoFlow_Backend.Application;
 using AutoFlow_Backend.Converters;
 using AutoFlow_Backend.Infrastructure;
-using AutoFlow_Backend.Infrastructure.Configuration;
 using AutoFlow_Backend.Infrastructure.Identity;
 using AutoFlow_Backend.Middleware;
 using AutoFlow_Backend.Filters;
 using AutoFlow_Backend.Application.Common;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,28 +25,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
-});
-
-var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings?.Issuer,
-        ValidAudience = jwtSettings?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings?.Key ?? string.Empty))
-    };
 });
 
 builder.Services.AddControllers(options =>

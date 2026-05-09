@@ -9,7 +9,7 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/vehicles")]
 [Tags("Vehicles")]
-public class VehiclesController : ControllerBase
+public class VehiclesController : BaseController
 {
     private readonly IVehicleService _vehicleService;
 
@@ -17,10 +17,6 @@ public class VehiclesController : ControllerBase
     {
         _vehicleService = vehicleService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// Create a new vehicle for the authenticated customer.
@@ -113,7 +109,7 @@ public class VehiclesController : ControllerBase
         var response = await _vehicleService.UpdateAsync(id, request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);

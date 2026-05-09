@@ -225,6 +225,13 @@ public class VehicleService : IVehicleService
         return errors;
     }
 
+    public async Task<List<Guid>> GetUserIdsBySearchQueryAsync(
+        string normalizedQuery,
+        CancellationToken cancellationToken = default)
+    {
+        return await _vehicleRepository.GetUserIdsByVehicleQueryAsync(normalizedQuery, cancellationToken);
+    }
+
     private static string NormalizeVehicleNumber(string vehicleNumber) =>
         vehicleNumber.Trim().ToUpperInvariant();
 

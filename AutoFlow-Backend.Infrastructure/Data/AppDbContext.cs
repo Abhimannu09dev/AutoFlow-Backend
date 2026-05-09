@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Infrastructure.Data;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAppDbContext
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/reviews")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Reviews")]
-public class ReviewsController : ControllerBase
+public class ReviewsController : BaseController
 {
     private readonly IReviewService _reviewService;
 
@@ -18,10 +18,6 @@ public class ReviewsController : ControllerBase
     {
         _reviewService = reviewService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a new customer review. Customers review for themselves; Staff/Admin can review for any customer.

@@ -91,7 +91,7 @@ public class StaffController : ControllerBase
         var response = await _staffService.UpdateAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);
@@ -115,7 +115,7 @@ public class StaffController : ControllerBase
         var response = await _staffService.DeactivateAsync(id, cancellationToken);
         if (!response.IsSuccess)
         {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (response.ErrorType == ErrorType.NotFound)
                 return NotFound(response);
 
             return BadRequest(response);

@@ -3,6 +3,7 @@ using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Infrastructure.Configuration;
 using AutoFlow_Backend.Infrastructure.Data;
 using AutoFlow_Backend.Infrastructure.Entities;
+using AutoFlow_Backend.Infrastructure.Extensions;
 using AutoFlow_Backend.Infrastructure.Repositories;
 using AutoFlow_Backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
@@ -55,6 +56,8 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
+
+        services.AddJwtAuthentication(configuration);
 
         return services;
     }

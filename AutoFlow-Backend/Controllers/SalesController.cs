@@ -1,7 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
-using AutoFlow_Backend.Application.Interfaces.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -15,12 +14,12 @@ namespace AutoFlow_Backend.Controllers;
 public class SalesController : ControllerBase
 {
     private readonly ISaleService _saleService;
-    private readonly IStaffRepository _staffRepository;
+    private readonly IStaffService _staffService;
 
-    public SalesController(ISaleService saleService, IStaffRepository staffRepository)
+    public SalesController(ISaleService saleService, IStaffService staffService)
     {
         _saleService = saleService;
-        _staffRepository = staffRepository;
+        _staffService = staffService;
     }
 
     /// <summary>
@@ -43,11 +42,11 @@ public class SalesController : ControllerBase
         if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var applicationUserId))
             return Unauthorized();
 
-        var staff = await _staffRepository.GetActiveByApplicationUserIdAsync(applicationUserId, cancellationToken);
-        if (staff is null)
+        var staffId = await _staffService.GetStaffIdByApplicationUserIdAsync(applicationUserId, cancellationToken);
+        if (staffId is null)
             return Forbid();
 
-        var result = await _saleService.CreateAsync(request, staff.Id, cancellationToken);
+        var result = await _saleService.CreateAsync(request, staffId.Value, cancellationToken);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
@@ -111,7 +110,7 @@ public class SalesController : ControllerBase
         var result = await _saleService.SendInvoiceAsync(id, cancellationToken);
         if (!result.IsSuccess)
         {
-            if (result.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            if (result.ErrorType == ErrorType.NotFound)
                 return NotFound(result);
             return BadRequest(result);
         }
