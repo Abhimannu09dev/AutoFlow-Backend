@@ -260,6 +260,45 @@ public class CustomerService : ICustomerService
         return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(MapAppointment).ToList());
     }
 
+    public async Task<ApiResponse<CustomerResponseDto>> GetMyProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
+
+        return ApiResponseFactory.Ok("Profile retrieved successfully.", Map(customer));
+    }
+
+    public async Task<ApiResponse<CustomerResponseDto>> UpdateMyProfileAsync(
+        Guid userId,
+        CustomerPatchDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var validationErrors = ValidatePatch(request);
+        if (validationErrors.Count > 0)
+            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
+
+        var customer = await _customerRepository.GetByApplicationUserIdForUpdateAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+            customer.FullName = request.FullName.Trim();
+
+        if (request.Phone is not null)
+            customer.Phone = NormalizeOptional(request.Phone);
+
+        if (request.Address is not null)
+            customer.Address = NormalizeOptional(request.Address);
+
+        _customerRepository.Update(customer);
+        await _customerRepository.SaveChangesAsync(cancellationToken);
+
+        return ApiResponseFactory.Ok("Profile updated successfully.", Map(customer));
+    }
+
     public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
         Guid customerId,
         VehicleCreateDto request,
@@ -370,6 +409,22 @@ public class CustomerService : ICustomerService
         CreatedAt = appointment.CreatedAt,
         UpdatedAt = appointment.UpdatedAt
     };
+
+    private static List<string> ValidatePatch(CustomerPatchDto request)
+    {
+        var errors = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName.Trim().Length > FullNameMaxLength)
+            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
+
+        if (!string.IsNullOrWhiteSpace(request.Phone) && request.Phone.Trim().Length > PhoneMaxLength)
+            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
+
+        if (!string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length > AddressMaxLength)
+            errors.Add($"Address must be at most {AddressMaxLength} characters.");
+
+        return errors;
+    }
 
     private static List<string> Validate(string? fullName, string? email, string? phone, string? address)
     {

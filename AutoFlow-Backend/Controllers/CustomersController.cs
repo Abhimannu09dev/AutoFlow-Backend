@@ -291,4 +291,55 @@ public class CustomerHistoryController : ControllerBase
 
         return Ok(response);
     }
+
+    /// <summary>
+    /// [Customer] Get your own profile
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Your profile details</returns>
+    [HttpGet("profile")]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> GetMyProfile(CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null)
+            return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
+
+        var response = await _customerService.GetMyProfileAsync(userId.Value, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// [Customer] Update your own profile
+    /// </summary>
+    /// <param name="request">Updated profile details (FullName, Email, Phone, Address)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated profile details</returns>
+    [HttpPatch("profile")]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> UpdateMyProfile(
+        [FromBody] CustomerPatchDto request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null)
+            return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
+
+        var response = await _customerService.UpdateMyProfileAsync(userId.Value, request, cancellationToken);
+        if (!response.IsSuccess)
+        {
+            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
 }

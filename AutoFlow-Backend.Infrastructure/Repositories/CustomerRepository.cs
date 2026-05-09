@@ -54,4 +54,10 @@ public class CustomerRepository : RepositoryBase<Customer>, ICustomerRepository
         await Context.Set<Customer>()
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.ApplicationUserId == applicationUserId, cancellationToken);
+
+    public async Task<Customer?> GetByApplicationUserIdForUpdateAsync(
+        Guid applicationUserId,
+        CancellationToken cancellationToken = default) =>
+        await Context.Set<Customer>()
+            .FirstOrDefaultAsync(c => c.ApplicationUserId == applicationUserId, cancellationToken);
 }
