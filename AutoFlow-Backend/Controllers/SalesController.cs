@@ -24,7 +24,7 @@ public class SalesController : ControllerBase
     }
 
     /// <summary>
-    /// [Staff, Admin] Record a new sale transaction. The staff member is resolved from the authenticated user's profile and linked to the sale.
+    /// [Staff, Admin] Record a new sale transaction. Staff role requires an active Staff profile; Admin uses their user ID directly.
     /// </summary>
     /// <param name="request">Sale details (CustomerId, Items, PaymentMethod, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -41,11 +41,14 @@ public class SalesController : ControllerBase
         if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var applicationUserId))
             return Unauthorized();
 
-        var staff = await _staffRepository.GetByApplicationUserIdAsync(applicationUserId, cancellationToken);
-        if (staff is null || !staff.IsActive)
+        var staffId = User.IsInRole("Admin")
+            ? applicationUserId
+            : (await _staffRepository.GetActiveByApplicationUserIdAsync(applicationUserId, cancellationToken))?.Id;
+
+        if (staffId is null)
             return Forbid();
 
-        var result = await _saleService.CreateAsync(request, staff.Id, cancellationToken);
+        var result = await _saleService.CreateAsync(request, staffId.Value, cancellationToken);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
