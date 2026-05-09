@@ -236,6 +236,30 @@ public class CustomerService : ICustomerService
         return ApiResponseFactory.Ok("Customer services retrieved successfully.", services.Select(MapAppointment).ToList());
     }
 
+    public async Task<ApiResponse<List<SaleResponse>>> GetMyPurchasesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer profile not found.");
+
+        var purchases = await _saleRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+        return ApiResponseFactory.Ok("Your purchase history retrieved successfully.", purchases.Select(MapSale).ToList());
+    }
+
+    public async Task<ApiResponse<List<AppointmentResponse>>> GetMyServicesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer profile not found.");
+
+        var services = await _appointmentRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+        return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(MapAppointment).ToList());
+    }
+
     public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
         Guid customerId,
         VehicleCreateDto request,

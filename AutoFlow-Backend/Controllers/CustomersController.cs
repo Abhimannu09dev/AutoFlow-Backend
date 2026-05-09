@@ -231,4 +231,64 @@ public class CustomersController : ControllerBase
 
         return Ok(response);
     }
+
+    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
+}
+
+[ApiController]
+[Route("api/customers/me")]
+[Authorize(Roles = "Customer")]
+[Tags("Customer Self-Service")]
+public class CustomerHistoryController : ControllerBase
+{
+    private readonly ICustomerService _customerService;
+
+    public CustomerHistoryController(ICustomerService customerService)
+    {
+        _customerService = customerService;
+    }
+
+    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
+
+    /// <summary>
+    /// [Customer] Get your own purchase history
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Your purchase history</returns>
+    [HttpGet("purchases")]
+    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<List<SaleResponse>>>> GetMyPurchases(CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null)
+            return Unauthorized(ApiResponseFactory.Fail<List<SaleResponse>>("Invalid user token."));
+
+        var response = await _customerService.GetMyPurchasesAsync(userId.Value, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// [Customer] Get your own service history (appointments)
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Your service history</returns>
+    [HttpGet("services")]
+    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetMyServices(CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null)
+            return Unauthorized(ApiResponseFactory.Fail<List<AppointmentResponse>>("Invalid user token."));
+
+        var response = await _customerService.GetMyServicesAsync(userId.Value, cancellationToken);
+        if (!response.IsSuccess)
+            return NotFound(response);
+
+        return Ok(response);
+    }
 }
