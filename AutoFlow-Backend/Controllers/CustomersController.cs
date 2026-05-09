@@ -23,9 +23,9 @@ public class CustomersController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new customer (with optional login account)
+    /// [Admin, Staff] Create a new customer (with optional login account and vehicle)
     /// </summary>
-    /// <param name="request">Customer details including FullName, Email, Phone, Address, and optional CreateLoginAccount flag. When createLoginAccount is true, creates a linked user account and sends temporary password via email.</param>
+    /// <param name="request">Customer details including FullName, Email, Phone, Address, CreateLoginAccount flag, and optional Vehicle details. When createLoginAccount is true, creates a linked user account. When vehicle is provided, creates a vehicle linked to the customer.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created customer details including ApplicationUserId when login account is created</returns>
     /// <response code="200">Customer created successfully</response>
