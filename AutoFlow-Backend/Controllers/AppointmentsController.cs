@@ -19,10 +19,14 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
+    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
+
+    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
+
     /// <summary>
     /// [Customer, Staff, Admin] Create a new appointment. Customers create for themselves; Staff/Admin can create for any customer.
     /// </summary>
-    /// <param name="request">Appointment details (CustomerId, Date, Time, Description)</param>
+    /// <param name="request">Appointment details (CustomerId optional for customers, Date, Time, Description)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created appointment details</returns>
     [HttpPost]
@@ -32,23 +36,32 @@ public class AppointmentsController : ControllerBase
         [FromBody] CreateAppointmentRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _appointmentService.CreateAsync(request, cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _appointmentService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
             return BadRequest(response);
+
         return Ok(response);
     }
 
     /// <summary>
-    /// [Customer, Staff, Admin] Get all appointments. Customers see only their own; Staff/Admin see all.
+    /// [Customer, Staff, Admin] Get appointments. Customers see only their own; Staff/Admin see all.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all appointments</returns>
+    /// <returns>List of appointments</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetAll(
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetAll(CancellationToken cancellationToken)
     {
-        var response = await _appointmentService.GetAllAsync(cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _appointmentService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
+        if (!response.IsSuccess)
+            return BadRequest(response);
+
         return Ok(response);
     }
 
@@ -65,9 +78,13 @@ public class AppointmentsController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var response = await _appointmentService.GetByIdAsync(id, cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _appointmentService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
             return NotFound(response);
+
         return Ok(response);
     }
 }
