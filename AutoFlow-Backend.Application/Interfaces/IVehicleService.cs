@@ -35,5 +35,7 @@ public interface IVehicleService
 
     Task<ApiResponse<bool>> DeleteAsync(
         Guid id,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
 }

@@ -135,7 +135,10 @@ public class VehiclesController : ControllerBase
         Guid id,
         CancellationToken cancellationToken)
     {
-        var response = await _vehicleService.DeleteAsync(id, cancellationToken);
+        var userId = GetUserId();
+        var isStaffOrAdmin = IsStaffOrAdmin();
+
+        var response = await _vehicleService.DeleteAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
             return NotFound(response);
 
