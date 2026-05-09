@@ -159,10 +159,15 @@ public class VehicleService : IVehicleService
 
     public async Task<ApiResponse<bool>> DeleteAsync(
         Guid id,
+        Guid? requestingUserId,
+        bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
         var vehicle = await _vehicleRepository.GetByIdForUpdateAsync(id, cancellationToken);
         if (vehicle is null)
+            return ApiResponseFactory.FailNotFound<bool>("Vehicle not found.");
+
+        if (!isStaffOrAdmin && (!requestingUserId.HasValue || vehicle.UserId != requestingUserId.Value))
             return ApiResponseFactory.FailNotFound<bool>("Vehicle not found.");
 
         _vehicleRepository.Delete(vehicle);
