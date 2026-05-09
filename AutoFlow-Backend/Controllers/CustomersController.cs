@@ -316,7 +316,7 @@ public class CustomerHistoryController : ControllerBase
     /// <summary>
     /// [Customer] Update your own profile
     /// </summary>
-    /// <param name="request">Updated profile details (FullName, Email, Phone, Address)</param>
+    /// <param name="request">Updated profile details (FullName, Phone, Address - Email cannot be changed)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Updated profile details</returns>
     [HttpPatch("profile")]

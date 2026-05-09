@@ -22,7 +22,7 @@ public class StaffController : ControllerBase
     /// <summary>
     /// [Admin] Create a new staff member with user account
     /// </summary>
-    /// <param name="request">Staff details including FullName, Email, Password, Position</param>
+    /// <param name="request">Staff details including FullName, Email, Password, Role (optional - defaults to Staff)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created staff details with user account</returns>
     [HttpPost]
