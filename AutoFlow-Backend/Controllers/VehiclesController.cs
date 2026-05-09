@@ -33,6 +33,7 @@ public class VehiclesController : ControllerBase
     [Authorize(Roles = "Customer,Admin,Staff")]
     [ProducesResponseType(typeof(ApiResponse<VehicleResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<VehicleResponseDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<VehicleResponseDto>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<VehicleResponseDto>>> Create(
         [FromBody] VehicleCreateDto request,
         CancellationToken cancellationToken)
@@ -47,14 +48,14 @@ public class VehiclesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
 
-    /// <summary>
+/// <summary>
     /// Get all vehicles. Staff/Admin see all vehicles; Customers see only their own.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of vehicles</returns>
     [HttpGet]
-    [Authorize(Roles = "Customer,Admin,Staff")]
     [ProducesResponseType(typeof(ApiResponse<List<VehicleResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<VehicleResponseDto>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<VehicleResponseDto>>>> GetAll(
         CancellationToken cancellationToken)
     {

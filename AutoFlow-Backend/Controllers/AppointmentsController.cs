@@ -32,6 +32,7 @@ public class AppointmentsController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<AppointmentResponse>>> Create(
         [FromBody] CreateAppointmentRequest request,
         CancellationToken cancellationToken)

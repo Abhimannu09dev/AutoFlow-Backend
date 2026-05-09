@@ -45,6 +45,7 @@ public class VendorsController : ControllerBase
     /// <returns>List of all vendors</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<VendorResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<VendorResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<VendorResponse>>>> GetAll(
         CancellationToken cancellationToken)
     {

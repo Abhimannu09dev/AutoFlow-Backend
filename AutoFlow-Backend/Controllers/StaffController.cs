@@ -47,6 +47,7 @@ public class StaffController : ControllerBase
     /// <returns>List of all active staff members</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<StaffResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<StaffResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<StaffResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _staffService.GetAllAsync(cancellationToken);

@@ -26,6 +26,7 @@ public class DashboardController : ControllerBase
     /// <returns>Dashboard statistics (sales count, revenue, customers, etc.)</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<DashboardResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<DashboardResponse>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<DashboardResponse>>> Get(CancellationToken cancellationToken)
     {
         var response = await _dashboardService.GetDashboardAsync(cancellationToken);

@@ -46,6 +46,7 @@ public class PartsController : ControllerBase
     /// <returns>List of all parts</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var response = await _partService.GetAllAsync(cancellationToken);

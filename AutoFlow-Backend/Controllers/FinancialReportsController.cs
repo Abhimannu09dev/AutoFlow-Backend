@@ -28,6 +28,7 @@ public class FinancialReportsController : ControllerBase
     [HttpGet("daily")]
     [ProducesResponseType(typeof(ApiResponse<FinancialReportResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<FinancialReportResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<FinancialReportResponse>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDaily(
         [FromQuery] DateOnly date,
         CancellationToken cancellationToken)

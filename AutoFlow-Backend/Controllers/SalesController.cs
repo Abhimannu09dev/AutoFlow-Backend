@@ -58,6 +58,7 @@ public class SalesController : ControllerBase
     /// <returns>List of all sales</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var result = await _saleService.GetAllAsync(cancellationToken);

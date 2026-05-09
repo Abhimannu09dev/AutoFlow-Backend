@@ -26,6 +26,7 @@ public class CustomerReportsController : ControllerBase
     /// <returns>List of customers ordered by total spending</returns>
     [HttpGet("top-spenders")]
     [ProducesResponseType(typeof(ApiResponse<List<CustomerTopSpenderReportResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<CustomerTopSpenderReportResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<CustomerTopSpenderReportResponse>>>> GetTopSpenders(
         CancellationToken cancellationToken)
     {

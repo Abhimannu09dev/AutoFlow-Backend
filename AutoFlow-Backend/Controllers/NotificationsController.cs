@@ -26,6 +26,8 @@ public class NotificationsController : ControllerBase
     [HttpPost("low-stock")]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> SendLowStockAlert(CancellationToken cancellationToken)
     {
         var result = await _notificationService.SendLowStockAlertAsync(cancellationToken);
