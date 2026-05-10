@@ -1,7 +1,7 @@
 using AutoFlow_Backend.Application.DTOs.Predictions;
 using AutoFlow_Backend.Domain.Entities;
 
-namespace AutoFlow_Backend.Application.Services.PredictionRules;
+namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IFailurePredictionRule
 {

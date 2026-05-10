@@ -2,6 +2,7 @@
 using AutoFlow_Backend.Application.DTOs.PurchaseInvoices;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -108,13 +109,13 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
             throw;
         }
 
-        return ApiResponseFactory.Ok("Purchase invoice created successfully.", MapToResponse(invoice!, vendor.VendorName));
+        return ApiResponseFactory.Ok("Purchase invoice created successfully.", PurchaseInvoiceMapper.ToResponse(invoice!, vendor.VendorName));
     }
 
     public async Task<ApiResponse<List<PurchaseInvoiceResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var invoices = await _purchaseInvoiceRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", invoices.Select(MapToResponse).ToList());
+        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", invoices.Select(PurchaseInvoiceMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<PurchaseInvoiceResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -123,42 +124,12 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
         if (invoice is null)
             return ApiResponseFactory.Fail<PurchaseInvoiceResponse>("Purchase invoice not found.");
 
-        return ApiResponseFactory.Ok("Purchase invoice retrieved successfully.", MapToResponse(invoice));
+        return ApiResponseFactory.Ok("Purchase invoice retrieved successfully.", PurchaseInvoiceMapper.ToResponse(invoice));
     }
 
     public async Task<ApiResponse<List<PurchaseInvoiceResponse>>> GetByVendorIdAsync(Guid vendorId, CancellationToken cancellationToken = default)
     {
         var invoices = await _purchaseInvoiceRepository.GetByVendorIdAsync(vendorId, cancellationToken);
-        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", invoices.Select(MapToResponse).ToList());
-    }
-
-    private static PurchaseInvoiceResponse MapToResponse(PurchaseInvoice invoice)
-    {
-        return MapToResponse(invoice, invoice.Vendor?.VendorName ?? string.Empty);
-    }
-
-    private static PurchaseInvoiceResponse MapToResponse(PurchaseInvoice invoice, string vendorName)
-    {
-        return new PurchaseInvoiceResponse
-        {
-            Id = invoice.Id,
-            VendorId = invoice.VendorId,
-            VendorName = vendorName,
-            CreatedByStaffId = invoice.CreatedByStaffId,
-            InvoiceDate = invoice.InvoiceDate,
-            TotalAmount = invoice.TotalAmount,
-            Status = invoice.Status,
-            Notes = invoice.Notes,
-            CreatedAt = invoice.CreatedAt,
-            Items = invoice.Items.Select(i => new PurchaseInvoiceItemResponse
-            {
-                Id = i.Id,
-                PartId = i.PartId,
-                PartName = i.Part?.PartName ?? string.Empty,
-                Quantity = i.Quantity,
-                UnitCost = i.UnitCost,
-                SubTotal = i.SubTotal
-            }).ToList()
-        };
+        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", invoices.Select(PurchaseInvoiceMapper.ToResponse).ToList());
     }
 }

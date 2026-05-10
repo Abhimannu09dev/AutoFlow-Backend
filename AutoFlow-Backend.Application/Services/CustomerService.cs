@@ -14,11 +14,6 @@ namespace AutoFlow_Backend.Application.Services;
 
 public class CustomerService : ICustomerService
 {
-    private const int FullNameMaxLength = 150;
-    private const int EmailMaxLength = 200;
-    private const int PhoneMaxLength = 30;
-    private const int AddressMaxLength = 300;
-
     private readonly ICustomerRepository _customerRepository;
     private readonly IVehicleService _vehicleService;
     private readonly ISaleRepository _saleRepository;
@@ -245,28 +240,5 @@ public class CustomerService : ICustomerService
             return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Customer is not linked to a user account.");
 
         return await _vehicleService.GetMyVehiclesAsync(customer.ApplicationUserId.Value, cancellationToken);
-    }
-
-    private static List<string> Validate(string? fullName, string? email, string? phone, string? address)
-    {
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(fullName))
-            errors.Add("Full name is required.");
-        else if (fullName.Trim().Length > FullNameMaxLength)
-            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(email))
-            errors.Add("Email is required.");
-        else if (email.Trim().Length > EmailMaxLength)
-            errors.Add($"Email must be at most {EmailMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(phone) && phone.Trim().Length > PhoneMaxLength)
-            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
-            errors.Add($"Address must be at most {AddressMaxLength} characters.");
-
-        return errors;
     }
 }

@@ -2,7 +2,6 @@
 using AutoFlow_Backend.Application.DTOs.Predictions;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
-using AutoFlow_Backend.Application.Services.PredictionRules;
 using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Services;

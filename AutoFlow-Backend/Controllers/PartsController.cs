@@ -11,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/parts")]
 [Authorize(Roles = "Admin,Staff")]
 [Tags("Parts Inventory")]
-public class PartsController : ControllerBase
+public class PartsController : BaseController
 {
     private readonly IPartService _partService;
 

@@ -1,5 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Predictions;
+using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Services.PredictionRules;

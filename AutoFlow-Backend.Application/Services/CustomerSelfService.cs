@@ -92,24 +92,4 @@ public class CustomerSelfService : ICustomerSelfService
 
         return ApiResponseFactory.Ok("Profile updated successfully.", CustomerMapper.ToResponse(customer));
     }
-
-    private const int FullNameMaxLength = 150;
-    private const int PhoneMaxLength = 30;
-    private const int AddressMaxLength = 300;
-
-    private static List<string> ValidatePatch(CustomerPatchDto request)
-    {
-        var errors = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName.Trim().Length > FullNameMaxLength)
-            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(request.Phone) && request.Phone.Trim().Length > PhoneMaxLength)
-            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length > AddressMaxLength)
-            errors.Add($"Address must be at most {AddressMaxLength} characters.");
-
-        return errors;
-    }
 }

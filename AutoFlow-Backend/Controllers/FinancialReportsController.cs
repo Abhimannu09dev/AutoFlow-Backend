@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/reports/financial")]
 [Authorize(Roles = "Admin")]
 [Tags("Financial Reports")]
-public class FinancialReportsController : ControllerBase
+public class FinancialReportsController : BaseController
 {
     private readonly IFinancialReportService _financialReportService;
 

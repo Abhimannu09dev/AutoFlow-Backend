@@ -32,13 +32,13 @@ public class RegistrationService : IRegistrationService
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
-        var emailNormalized = request.Email.ToUpperInvariant();
-        var userExists = await _identityService.UserExistsByEmailAsync(emailNormalized, cancellationToken: cancellationToken);
+        var normalizedEmail = StringNormalizer.NormalizeEmail(request.Email);
+        var userExists = await _identityService.UserExistsByEmailAsync(normalizedEmail, cancellationToken: cancellationToken);
         if (userExists)
             return ApiResponseFactory.FailConflict<AuthResponse>("Email is already registered.");
 
         var (userCreated, userId, createError) = await _identityService.CreateUserAsync(
-            email: request.Email,
+            email: normalizedEmail,
             password: request.Password,
             fullName: request.FullName,
             phone: request.Phone,
@@ -71,7 +71,7 @@ public class RegistrationService : IRegistrationService
         var customer = new Customer
         {
             FullName = request.FullName,
-            Email = request.Email,
+            Email = normalizedEmail,
             Phone = request.Phone,
             Address = request.Address,
             CreatedAt = DateTime.UtcNow,
@@ -81,10 +81,10 @@ public class RegistrationService : IRegistrationService
         await _customerRepository.AddAsync(customer, cancellationToken);
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Customer registered successfully: {Email}", request.Email);
+        _logger.LogInformation("Customer registered successfully: {Email}", normalizedEmail);
 
         return await _authService.LoginAsync(
-            new LoginRequest { Email = request.Email, Password = request.Password },
+            new LoginRequest { Email = normalizedEmail, Password = request.Password },
             cancellationToken);
     }
 }

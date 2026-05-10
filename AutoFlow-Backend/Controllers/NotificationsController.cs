@@ -9,7 +9,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/notifications")]
 [Authorize(Roles = "Admin")]
 [Tags("Notifications")]
-public class NotificationsController : ControllerBase
+public class NotificationsController : BaseController
 {
     private readonly INotificationService _notificationService;
 

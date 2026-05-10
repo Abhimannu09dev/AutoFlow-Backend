@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/predictions")]
 [Authorize]
 [Tags("Predictions")]
-public class PredictionsController : ControllerBase
+public class PredictionsController : BaseController
 {
     private readonly IFailurePredictionService _failurePredictionService;
 

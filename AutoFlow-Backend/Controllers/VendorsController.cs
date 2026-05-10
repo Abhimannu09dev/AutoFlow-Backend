@@ -11,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/vendors")]
 [Authorize(Roles = "Admin")]
 [Tags("Vendors")]
-public class VendorsController : ControllerBase
+public class VendorsController : BaseController
 {
     private readonly IVendorService _vendorService;
 

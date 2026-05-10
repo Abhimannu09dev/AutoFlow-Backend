@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        services.AddScoped<DbContext, AppDbContext>();
+
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {
             options.Password.RequiredLength = 6;
