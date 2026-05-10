@@ -48,7 +48,7 @@ public class ReportQueryRepository : IReportQueryRepository
     public async Task<List<CustomerSummaryResult>>
         GetTopSpendersAsync(CancellationToken cancellationToken = default)
     {
-        return await (from sale in _dbContext.Sales.AsNoTracking()
+        var results = await (from sale in _dbContext.Sales.AsNoTracking()
                       join customer in _dbContext.Customers.AsNoTracking()
                           on sale.CustomerId equals customer.Id
                       group new { sale, customer } by new
@@ -61,22 +61,35 @@ public class ReportQueryRepository : IReportQueryRepository
                       }
                       into grouped
                       orderby grouped.Sum(x => x.sale.TotalAmount) descending
-                      select new CustomerSummaryResult(
+                      select new
+                      {
                           grouped.Key.Id,
                           grouped.Key.FullName,
                           grouped.Key.Email,
                           grouped.Key.Phone,
                           grouped.Key.Address,
-                          grouped.Count(),
-                          grouped.Sum(x => x.sale.TotalAmount),
-                          grouped.Max(x => x.sale.SaleDate)))
+                          PurchaseCount = grouped.Count(),
+                          TotalSpent = grouped.Sum(x => x.sale.TotalAmount),
+                          LastPurchaseDate = grouped.Max(x => x.sale.SaleDate)
+                      })
             .ToListAsync(cancellationToken);
+
+        return results.Select(r => new CustomerSummaryResult(
+            r.Id,
+            r.FullName,
+            r.Email,
+            r.Phone,
+            r.Address,
+            r.PurchaseCount,
+            r.TotalSpent,
+            r.LastPurchaseDate))
+            .ToList();
     }
 
     public async Task<List<CustomerSummaryResult>>
         GetRegularCustomersAsync(int minimumPurchaseCount, CancellationToken cancellationToken = default)
     {
-        return await (from sale in _dbContext.Sales.AsNoTracking()
+        var results = await (from sale in _dbContext.Sales.AsNoTracking()
                       join customer in _dbContext.Customers.AsNoTracking()
                           on sale.CustomerId equals customer.Id
                       group new { sale, customer } by new
@@ -90,16 +103,29 @@ public class ReportQueryRepository : IReportQueryRepository
                       into grouped
                       where grouped.Count() > minimumPurchaseCount
                       orderby grouped.Count() descending, grouped.Sum(x => x.sale.TotalAmount) descending
-                      select new CustomerSummaryResult(
+                      select new
+                      {
                           grouped.Key.Id,
                           grouped.Key.FullName,
                           grouped.Key.Email,
                           grouped.Key.Phone,
                           grouped.Key.Address,
-                          grouped.Count(),
-                          grouped.Sum(x => x.sale.TotalAmount),
-                          grouped.Max(x => x.sale.SaleDate)))
+                          PurchaseCount = grouped.Count(),
+                          TotalSpent = grouped.Sum(x => x.sale.TotalAmount),
+                          LastPurchaseDate = grouped.Max(x => x.sale.SaleDate)
+                      })
             .ToListAsync(cancellationToken);
+
+        return results.Select(r => new CustomerSummaryResult(
+            r.Id,
+            r.FullName,
+            r.Email,
+            r.Phone,
+            r.Address,
+            r.PurchaseCount,
+            r.TotalSpent,
+            r.LastPurchaseDate))
+            .ToList();
     }
 
     public async Task<List<OverdueCreditSaleReadModel>> GetOverdueCreditSalesAsync(

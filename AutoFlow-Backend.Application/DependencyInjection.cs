@@ -1,5 +1,6 @@
 ﻿using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Services;
+using AutoFlow_Backend.Application.Services.PredictionRules;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
