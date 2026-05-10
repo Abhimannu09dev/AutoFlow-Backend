@@ -1,3 +1,4 @@
+using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Infrastructure.Configuration;
 using MailKit.Net.Smtp;
@@ -10,10 +11,14 @@ namespace AutoFlow_Backend.Infrastructure.Services;
 public class EmailService : IEmailService
 {
     private readonly EmailSettings _emailSettings;
+    private readonly InvoiceTemplateBuilder _templateBuilder;
 
-    public EmailService(IOptions<EmailSettings> emailSettings)
+    public EmailService(
+        IOptions<EmailSettings> emailSettings,
+        InvoiceTemplateBuilder templateBuilder)
     {
         _emailSettings = emailSettings.Value;
+        _templateBuilder = templateBuilder;
     }
 
     public async Task SendAsync(
@@ -33,5 +38,15 @@ public class EmailService : IEmailService
         await client.AuthenticateAsync(_emailSettings.SenderEmail, _emailSettings.Password, cancellationToken);
         await client.SendAsync(message, cancellationToken);
         await client.DisconnectAsync(true, cancellationToken);
+    }
+
+    public async Task SendInvoiceAsync(SaleInvoiceDto invoice, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(invoice.CustomerEmail))
+            return;
+
+        var html = _templateBuilder.Build(invoice);
+        var subject = "AutoFlow Invoice #" + invoice.InvoiceNumber;
+        await SendAsync(invoice.CustomerEmail, subject, html, cancellationToken);
     }
 }

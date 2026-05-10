@@ -9,15 +9,18 @@ public class NotificationService : INotificationService
     private readonly IEmailService _emailService;
     private readonly IPartRepository _partRepository;
     private readonly IReportQueryRepository _reportQueryRepository;
+    private readonly INotificationSettings _notificationSettings;
 
     public NotificationService(
         IEmailService emailService,
         IPartRepository partRepository,
-        IReportQueryRepository reportQueryRepository)
+        IReportQueryRepository reportQueryRepository,
+        INotificationSettings notificationSettings)
     {
         _emailService = emailService;
         _partRepository = partRepository;
         _reportQueryRepository = reportQueryRepository;
+        _notificationSettings = notificationSettings;
     }
 
     public async Task<ApiResponse<bool>> SendLowStockAlertAsync(CancellationToken cancellationToken = default)
@@ -36,7 +39,7 @@ public class NotificationService : INotificationService
             <p>Please restock as soon as possible.</p>";
 
         await _emailService.SendAsync(
-            to: "admin@autoflow.com",
+            to: _notificationSettings.AdminEmail,
             subject: "AutoFlow — Low Stock Alert",
             body: body,
             cancellationToken: cancellationToken);
@@ -54,19 +57,19 @@ public class NotificationService : INotificationService
 
         foreach (var sale in overdueSales)
         {
-            if (sale.Customer is null || string.IsNullOrWhiteSpace(sale.Customer.Email))
+            if (string.IsNullOrWhiteSpace(sale.CustomerEmail))
                 continue;
 
             var body = $@"
                 <h2>Payment Reminder</h2>
-                <p>Dear {sale.Customer.FullName},</p>
+                <p>Dear {sale.CustomerName},</p>
                 <p>This is a reminder that your credit payment of <strong>${sale.TotalAmount:F2}</strong>
                 from <strong>{sale.SaleDate:MMMM dd, yyyy}</strong> is overdue.</p>
                 <p>Please contact us to arrange payment as soon as possible.</p>
                 <p>Thank you,<br/>AutoFlow Team</p>";
 
             await _emailService.SendAsync(
-                to: sale.Customer.Email,
+                to: sale.CustomerEmail,
                 subject: "AutoFlow — Payment Reminder",
                 body: body,
                 cancellationToken: cancellationToken);

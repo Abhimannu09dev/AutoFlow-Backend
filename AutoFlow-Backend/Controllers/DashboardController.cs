@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/dashboard")]
 [Authorize(Roles = "Admin")]
 [Tags("Dashboard")]
-public class DashboardController : ControllerBase
+public class DashboardController : BaseController
 {
     private readonly IDashboardService _dashboardService;
 

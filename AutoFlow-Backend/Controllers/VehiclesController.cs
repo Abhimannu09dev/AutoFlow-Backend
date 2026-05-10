@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
@@ -9,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/vehicles")]
 [Tags("Vehicles")]
-public class VehiclesController : ControllerBase
+public class VehiclesController : BaseController
 {
     private readonly IVehicleService _vehicleService;
 
@@ -17,10 +18,6 @@ public class VehiclesController : ControllerBase
     {
         _vehicleService = vehicleService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// Create a new vehicle for the authenticated customer.
@@ -43,7 +40,7 @@ public class VehiclesController : ControllerBase
 
         var response = await _vehicleService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return BadRequest(response);
+            return response.ToActionResult();
 
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
@@ -85,7 +82,7 @@ public class VehiclesController : ControllerBase
 
         var response = await _vehicleService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
 
         return Ok(response);
     }
@@ -112,12 +109,7 @@ public class VehiclesController : ControllerBase
 
         var response = await _vehicleService.UpdateAsync(id, request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
+            return response.ToActionResult();
 
         return Ok(response);
     }
@@ -141,7 +133,7 @@ public class VehiclesController : ControllerBase
 
         var response = await _vehicleService.DeleteAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
 
         return Ok(response);
     }

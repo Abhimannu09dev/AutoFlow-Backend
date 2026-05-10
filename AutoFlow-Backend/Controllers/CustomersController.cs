@@ -4,6 +4,7 @@ using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +14,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/customers")]
 [Authorize(Roles = "Admin,Staff")]
 [Tags("Customers")]
-public class CustomersController : ControllerBase
+public class CustomersController : BaseController
 {
     private readonly ICustomerService _customerService;
 
@@ -28,11 +29,6 @@ public class CustomersController : ControllerBase
     /// <param name="request">Customer details including FullName, Email, Phone, Address, CreateLoginAccount flag, and optional Vehicle details. When createLoginAccount is true, creates a linked user account. When vehicle is provided, creates a vehicle linked to the customer.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created customer details including ApplicationUserId when login account is created</returns>
-    /// <response code="200">Customer created successfully</response>
-    /// <response code="400">Validation error or creation failed</response>
-    /// <response code="401">Unauthorized - Invalid or missing authentication token</response>
-    /// <response code="403">Forbidden - Insufficient permissions</response>
-    /// <response code="409">Email already exists (as user account or customer)</response>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status400BadRequest)]
@@ -45,7 +41,7 @@ public class CustomersController : ControllerBase
     {
         var response = await _customerService.CreateAsync(request, cancellationToken);
         if (!response.IsSuccess)
-            return BadRequest(response);
+            return response.ToActionResult();
 
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
@@ -79,15 +75,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetPurchasesAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -105,14 +93,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetServicesAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -129,10 +110,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.SearchAsync(query, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -149,10 +127,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetByIdAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -172,15 +147,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.UpdateAsync(id, request, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -201,12 +168,7 @@ public class CustomersController : ControllerBase
     {
         var response = await _customerService.AddVehicleAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
+            return response.ToActionResult();
 
         return CreatedAtAction(nameof(GetVehicles), new { id }, response);
     }
@@ -226,125 +188,6 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetVehiclesAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
-    }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-}
-
-[ApiController]
-[Route("api/customers/me")]
-[Authorize(Roles = "Customer")]
-[Tags("Customer Self-Service")]
-public class CustomerHistoryController : ControllerBase
-{
-    private readonly ICustomerService _customerService;
-
-    public CustomerHistoryController(ICustomerService customerService)
-    {
-        _customerService = customerService;
-    }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    /// <summary>
-    /// [Customer] Get your own purchase history
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Your purchase history</returns>
-    [HttpGet("purchases")]
-    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<List<SaleResponse>>>> GetMyPurchases(CancellationToken cancellationToken)
-    {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(ApiResponseFactory.Fail<List<SaleResponse>>("Invalid user token."));
-
-        var response = await _customerService.GetMyPurchasesAsync(userId.Value, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// [Customer] Get your own service history (appointments)
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Your service history</returns>
-    [HttpGet("services")]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetMyServices(CancellationToken cancellationToken)
-    {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(ApiResponseFactory.Fail<List<AppointmentResponse>>("Invalid user token."));
-
-        var response = await _customerService.GetMyServicesAsync(userId.Value, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// [Customer] Get your own profile
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Your profile details</returns>
-    [HttpGet("profile")]
-    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> GetMyProfile(CancellationToken cancellationToken)
-    {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
-
-        var response = await _customerService.GetMyProfileAsync(userId.Value, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// [Customer] Update your own profile
-    /// </summary>
-    /// <param name="request">Updated profile details (FullName, Phone, Address - Email cannot be changed)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Updated profile details</returns>
-    [HttpPatch("profile")]
-    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<CustomerResponseDto>>> UpdateMyProfile(
-        [FromBody] CustomerPatchDto request,
-        CancellationToken cancellationToken)
-    {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(ApiResponseFactory.Fail<CustomerResponseDto>("Invalid user token."));
-
-        var response = await _customerService.UpdateMyProfileAsync(userId.Value, request, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

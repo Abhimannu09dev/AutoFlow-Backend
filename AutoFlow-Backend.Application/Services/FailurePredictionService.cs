@@ -8,21 +8,18 @@ namespace AutoFlow_Backend.Application.Services;
 
 public class FailurePredictionService : IFailurePredictionService
 {
-    private const int BrakePadMileageThreshold = 50_000;
-    private const int TimingBeltMileageThreshold = 80_000;
-    private const int TransmissionFluidMileageThreshold = 100_000;
-    private const int CoolantAgeThresholdYears = 5;
-    private const int BatteryAgeThresholdYears = 10;
-
     private readonly ICustomerRepository _customerRepository;
     private readonly IVehicleRepository _vehicleRepository;
+    private readonly IEnumerable<IFailurePredictionRule> _rules;
 
     public FailurePredictionService(
         ICustomerRepository customerRepository,
-        IVehicleRepository vehicleRepository)
+        IVehicleRepository vehicleRepository,
+        IEnumerable<IFailurePredictionRule> rules)
     {
         _customerRepository = customerRepository;
         _vehicleRepository = vehicleRepository;
+        _rules = rules;
     }
 
     public async Task<ApiResponse<List<FailurePredictionResponse>>> GetPredictionsAsync(
@@ -40,69 +37,19 @@ public class FailurePredictionService : IFailurePredictionService
         if (vehicles.Count == 0)
             return ApiResponseFactory.Ok("No vehicles found for this customer.", new List<FailurePredictionResponse>());
 
-        var currentYear = DateTime.UtcNow.Year;
-        var predictions = vehicles.Select(vehicle => BuildPrediction(vehicle, currentYear)).ToList();
+        var predictions = vehicles.Select(BuildPrediction).ToList();
 
         return ApiResponseFactory.Ok("Failure predictions retrieved successfully.", predictions);
     }
 
-    private static FailurePredictionResponse BuildPrediction(Vehicle vehicle, int currentYear)
+    private FailurePredictionResponse BuildPrediction(Vehicle vehicle)
     {
-        var failures = new List<PredictedFailureResponse>();
-        var vehicleAge = currentYear - vehicle.Year;
-
-        if (vehicle.Mileage > BrakePadMileageThreshold)
-        {
-            failures.Add(Failure("Brake Pads",
-                $"Vehicle has {vehicle.Mileage:N0} km. Brake pads typically need replacement after {BrakePadMileageThreshold:N0} km.",
-                "High"));
-            failures.Add(Failure("Air Filter",
-                $"Vehicle has {vehicle.Mileage:N0} km. Air filter replacement overdue.",
-                "Low"));
-            failures.Add(Failure("Oil Filter",
-                $"Vehicle has {vehicle.Mileage:N0} km. Oil filter should be replaced regularly.",
-                "Low"));
-        }
-
-        if (vehicle.Mileage > TimingBeltMileageThreshold)
-        {
-            failures.Add(Failure("Timing Belt",
-                $"Vehicle has {vehicle.Mileage:N0} km. Timing belt replacement recommended after {TimingBeltMileageThreshold:N0} km.",
-                "High"));
-            failures.Add(Failure("Water Pump",
-                $"Vehicle has {vehicle.Mileage:N0} km. Water pump typically fails around {TimingBeltMileageThreshold:N0}-{TransmissionFluidMileageThreshold:N0} km.",
-                "High"));
-            failures.Add(Failure("Spark Plugs",
-                $"Vehicle has {vehicle.Mileage:N0} km. Spark plugs due for replacement.",
-                "Medium"));
-        }
-
-        if (vehicle.Mileage > TransmissionFluidMileageThreshold)
-        {
-            failures.Add(Failure("Transmission Fluid",
-                $"Vehicle has {vehicle.Mileage:N0} km. Transmission fluid change critical after {TransmissionFluidMileageThreshold:N0} km.",
-                "High"));
-            failures.Add(Failure("Shock Absorbers",
-                $"Vehicle has {vehicle.Mileage:N0} km. Shock absorbers likely worn at this mileage.",
-                "Medium"));
-        }
-
-        if (vehicleAge > CoolantAgeThresholdYears)
-        {
-            failures.Add(Failure("Coolant",
-                $"Vehicle is {vehicleAge} years old. Coolant flush recommended every {CoolantAgeThresholdYears} years.",
-                "Medium"));
-        }
-
-        if (vehicleAge > BatteryAgeThresholdYears)
-        {
-            failures.Add(Failure("Battery",
-                $"Vehicle is {vehicleAge} years old. Batteries typically last 3-5 years.",
-                "High"));
-            failures.Add(Failure("Serpentine Belt",
-                $"Vehicle is {vehicleAge} years old. Rubber belts degrade significantly after {BatteryAgeThresholdYears} years.",
-                "Medium"));
-        }
+        var vehicleAge = DateTime.UtcNow.Year - vehicle.Year;
+        var failures = _rules
+            .Where(rule => rule.Applies(vehicle, vehicleAge))
+            .SelectMany(rule => rule.GetFailures(vehicle))
+            .OrderByDescending(f => f.Severity == "High" ? 3 : f.Severity == "Medium" ? 2 : 1)
+            .ToList();
 
         return new FailurePredictionResponse
         {
@@ -113,11 +60,6 @@ public class FailurePredictionService : IFailurePredictionService
             Year = vehicle.Year,
             Mileage = vehicle.Mileage,
             PredictedFailures = failures
-                .OrderByDescending(f => f.Severity == "High" ? 3 : f.Severity == "Medium" ? 2 : 1)
-                .ToList()
         };
     }
-
-    private static PredictedFailureResponse Failure(string partName, string reason, string severity) =>
-        new() { PartName = partName, Reason = reason, Severity = severity };
 }

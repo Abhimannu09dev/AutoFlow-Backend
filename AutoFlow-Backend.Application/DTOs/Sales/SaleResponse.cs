@@ -21,6 +21,9 @@ namespace AutoFlow_Backend.Application.DTOs.Sales
         public SaleStatus Status { get; set; }
         public string? Notes { get; set; }
         public DateTime? InvoiceSentAt { get; set; }
+        public string? InvoiceEmail { get; set; }
+        public DateTime? InvoiceFailedAt { get; set; }
+        public string? InvoiceFailureReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<SaleItemResponse> Items { get; set; } = new();
     }

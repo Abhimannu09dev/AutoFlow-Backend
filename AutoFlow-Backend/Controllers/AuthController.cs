@@ -9,13 +9,15 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/auth")]
 [Tags("Authentication")]
-public class AuthController : ControllerBase
+public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
+    private readonly IRegistrationService _registrationService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IRegistrationService registrationService)
     {
         _authService = authService;
+        _registrationService = registrationService;
     }
 
     /// <summary>
@@ -24,8 +26,6 @@ public class AuthController : ControllerBase
     /// <param name="request">Registration details including FullName, Email, Password, optional Address and Phone</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Registration result with JWT token on success</returns>
-    /// <response code="200">Registration successful with JWT token</response>
-    /// <response code="400">Registration failed - email already exists or invalid data</response>
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
@@ -34,7 +34,7 @@ public class AuthController : ControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _authService.RegisterAsync(request, cancellationToken);
+        var response = await _registrationService.RegisterAsync(request, cancellationToken);
         return response.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
@@ -44,8 +44,6 @@ public class AuthController : ControllerBase
     /// <param name="request">Login credentials (Email and Password)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Login result with JWT token on success</returns>
-    /// <response code="200">Login successful with JWT token</response>
-    /// <response code="400">Login failed - invalid credentials</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]

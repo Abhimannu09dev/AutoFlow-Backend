@@ -3,6 +3,7 @@ using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Infrastructure.Configuration;
 using AutoFlow_Backend.Infrastructure.Data;
 using AutoFlow_Backend.Infrastructure.Entities;
+using AutoFlow_Backend.Infrastructure.Extensions;
 using AutoFlow_Backend.Infrastructure.Repositories;
 using AutoFlow_Backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        services.AddScoped<DbContext, AppDbContext>();
+
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {
             options.Password.RequiredLength = 6;
@@ -39,6 +42,9 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        services.Configure<CompanySettings>(configuration.GetSection("Company"));
+        services.Configure<AutoFlow_Backend.Application.Common.BusinessRulesSettings>(
+            configuration.GetSection("BusinessRules"));
 
         services.AddScoped<IVendorRepository, VendorRepository>();
         services.AddScoped<IPartRepository, PartRepository>();
@@ -55,6 +61,9 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<INotificationSettings, NotificationSettings>();
+
+        services.AddJwtAuthentication(configuration);
 
         return services;
     }

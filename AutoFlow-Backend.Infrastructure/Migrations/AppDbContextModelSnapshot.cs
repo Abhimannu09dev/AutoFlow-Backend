@@ -302,6 +302,12 @@ namespace AutoFlow_Backend.Infrastructure.Migrations
                     b.Property<string>("InvoiceEmail")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("InvoiceFailedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceFailureReason")
+                        .HasColumnType("text");
+
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
                         .HasColumnType("text");

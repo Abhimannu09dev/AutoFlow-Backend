@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/part-requests")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Part Requests")]
-public class PartRequestsController : ControllerBase
+public class PartRequestsController : BaseController
 {
     private readonly IPartRequestService _partRequestService;
 
@@ -18,10 +19,6 @@ public class PartRequestsController : ControllerBase
     {
         _partRequestService = partRequestService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a part request for items not in inventory. Customers request for themselves; Staff/Admin can request for any customer.
@@ -40,10 +37,7 @@ public class PartRequestsController : ControllerBase
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _partRequestService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -59,9 +53,6 @@ public class PartRequestsController : ControllerBase
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _partRequestService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

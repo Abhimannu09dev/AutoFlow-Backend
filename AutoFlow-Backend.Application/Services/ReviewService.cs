@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reviews;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Services;
@@ -58,21 +59,12 @@ public class ReviewService : IReviewService
         await _reviewRepository.AddAsync(review, cancellationToken);
         await _reviewRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Review created successfully.", Map(review));
+        return ApiResponseFactory.Ok("Review created successfully.", review.ToResponse());
     }
 
     public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var results = await _reviewRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results.Select(r => r.ToResponse()).ToList());
     }
-
-    private static ReviewResponse Map(Review r) => new()
-    {
-        Id = r.Id,
-        CustomerId = r.CustomerId,
-        Rating = r.Rating,
-        Comment = r.Comment,
-        CreatedAt = r.CreatedAt
-    };
 }

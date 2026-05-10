@@ -11,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/purchase-invoices")]
 [Authorize(Roles = "Admin")]
 [Tags("Purchase Invoices")]
-public class PurchaseInvoicesController : ControllerBase
+public class PurchaseInvoicesController : BaseController
 {
     private readonly IPurchaseInvoiceService _purchaseInvoiceService;
 

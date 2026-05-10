@@ -10,4 +10,5 @@ public interface IStaffService
     Task<ApiResponse<StaffResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<StaffResponse>> UpdateAsync(Guid id, UpdateStaffRequest request, CancellationToken cancellationToken = default);
     Task<ApiResponse<bool>> DeactivateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Guid?> GetStaffIdByApplicationUserIdAsync(Guid applicationUserId, CancellationToken cancellationToken = default);
 }

@@ -10,7 +10,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/reports/customers")]
 [Authorize(Roles = "Admin,Staff")]
 [Tags("Customer Reports")]
-public class CustomerReportsController : ControllerBase
+public class CustomerReportsController : BaseController
 {
     private readonly ICustomerReportService _customerReportService;
 

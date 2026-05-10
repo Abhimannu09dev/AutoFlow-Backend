@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Extensions;
 using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/appointments")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Appointments")]
-public class AppointmentsController : ControllerBase
+public class AppointmentsController : BaseController
 {
     private readonly IAppointmentService _appointmentService;
 
@@ -18,10 +19,6 @@ public class AppointmentsController : ControllerBase
     {
         _appointmentService = appointmentService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a new appointment. Customers create for themselves; Staff/Admin can create for any customer.
@@ -41,10 +38,7 @@ public class AppointmentsController : ControllerBase
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -54,16 +48,14 @@ public class AppointmentsController : ControllerBase
     /// <returns>List of appointments</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -74,6 +66,7 @@ public class AppointmentsController : ControllerBase
     /// <returns>Appointment details</returns>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<AppointmentResponse>>> GetById(
         Guid id,
@@ -83,9 +76,6 @@ public class AppointmentsController : ControllerBase
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

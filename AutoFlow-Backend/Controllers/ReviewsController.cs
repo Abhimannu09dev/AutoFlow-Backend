@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reviews;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/reviews")]
 [Authorize(Roles = "Customer,Admin,Staff")]
 [Tags("Reviews")]
-public class ReviewsController : ControllerBase
+public class ReviewsController : BaseController
 {
     private readonly IReviewService _reviewService;
 
@@ -18,10 +19,6 @@ public class ReviewsController : ControllerBase
     {
         _reviewService = reviewService;
     }
-
-    private Guid? GetUserId() => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } idStr && Guid.TryParse(idStr, out var userId) ? userId : null;
-
-    private bool IsStaffOrAdmin() => User.IsInRole("Admin") || User.IsInRole("Staff");
 
     /// <summary>
     /// [Customer, Staff, Admin] Create a new customer review. Customers review for themselves; Staff/Admin can review for any customer.
@@ -40,10 +37,7 @@ public class ReviewsController : ControllerBase
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _reviewService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>

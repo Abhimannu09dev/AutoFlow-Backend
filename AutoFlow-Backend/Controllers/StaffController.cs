@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Staff;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/staff")]
 [Authorize(Roles = "Admin")]
 [Tags("Staff")]
-public class StaffController : ControllerBase
+public class StaffController : BaseController
 {
     private readonly IStaffService _staffService;
 
@@ -34,10 +35,7 @@ public class StaffController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _staffService.CreateAsync(request, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -66,10 +64,7 @@ public class StaffController : ControllerBase
     public async Task<ActionResult<ApiResponse<StaffResponse>>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var response = await _staffService.GetByIdAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -89,15 +84,7 @@ public class StaffController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _staffService.UpdateAsync(id, request, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -113,14 +100,6 @@ public class StaffController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken cancellationToken)
     {
         var response = await _staffService.DeactivateAsync(id, cancellationToken);
-        if (!response.IsSuccess)
-        {
-            if (response.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

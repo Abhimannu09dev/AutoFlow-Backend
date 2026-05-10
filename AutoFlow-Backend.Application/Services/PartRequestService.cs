@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
 
@@ -64,7 +65,7 @@ public class PartRequestService : IPartRequestService
         await _partRequestRepository.AddAsync(partRequest, cancellationToken);
         await _partRequestRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Part request created successfully.", Map(partRequest));
+        return ApiResponseFactory.Ok("Part request created successfully.", partRequest.ToResponse());
     }
 
     public async Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
@@ -91,17 +92,6 @@ public class PartRequestService : IPartRequestService
             return ApiResponseFactory.Fail<List<PartRequestResponse>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results.Select(p => p.ToResponse()).ToList());
     }
-
-    private static PartRequestResponse Map(PartRequest pr) => new()
-    {
-        Id = pr.Id,
-        CustomerId = pr.CustomerId,
-        PartName = pr.PartName,
-        Quantity = pr.Quantity,
-        Status = pr.Status.ToString(),
-        CreatedAt = pr.CreatedAt,
-        UpdatedAt = pr.UpdatedAt
-    };
 }

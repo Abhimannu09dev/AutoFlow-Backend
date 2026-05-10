@@ -1,0 +1,95 @@
+using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.DTOs.Appointments;
+using AutoFlow_Backend.Application.DTOs.Customers;
+using AutoFlow_Backend.Application.DTOs.Sales;
+using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
+using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
+
+namespace AutoFlow_Backend.Application.Services;
+
+public class CustomerSelfService : ICustomerSelfService
+{
+    private readonly ICustomerRepository _customerRepository;
+    private readonly ISaleRepository _saleRepository;
+    private readonly IAppointmentRepository _appointmentRepository;
+    private readonly IValidator<CustomerPatchDto> _validator;
+
+    public CustomerSelfService(
+        ICustomerRepository customerRepository,
+        ISaleRepository saleRepository,
+        IAppointmentRepository appointmentRepository,
+        IValidator<CustomerPatchDto> validator)
+    {
+        _customerRepository = customerRepository;
+        _saleRepository = saleRepository;
+        _appointmentRepository = appointmentRepository;
+        _validator = validator;
+    }
+
+    public async Task<ApiResponse<List<SaleResponse>>> GetMyPurchasesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer profile not found.");
+
+        var purchases = await _saleRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+        return ApiResponseFactory.Ok("Your purchase history retrieved successfully.", purchases.Select(s => SaleMapper.ToSaleResponse(s)).ToList());
+    }
+
+    public async Task<ApiResponse<List<AppointmentResponse>>> GetMyServicesAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer profile not found.");
+
+        var services = await _appointmentRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+        return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(a => AppointmentMapper.ToResponse(a)).ToList());
+    }
+
+    public async Task<ApiResponse<CustomerResponseDto>> GetMyProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
+
+        return ApiResponseFactory.Ok("Profile retrieved successfully.", CustomerMapper.ToResponse(customer));
+    }
+
+    public async Task<ApiResponse<CustomerResponseDto>> UpdateMyProfileAsync(
+        Guid userId,
+        CustomerPatchDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
+
+        var customer = await _customerRepository.GetByApplicationUserIdForUpdateAsync(userId, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+            customer.FullName = request.FullName.Trim();
+
+        if (request.Phone is not null)
+            customer.Phone = StringNormalizer.NormalizeOptional(request.Phone);
+
+        if (request.Address is not null)
+            customer.Address = StringNormalizer.NormalizeOptional(request.Address);
+
+        _customerRepository.Update(customer);
+        await _customerRepository.SaveChangesAsync(cancellationToken);
+
+        return ApiResponseFactory.Ok("Profile updated successfully.", CustomerMapper.ToResponse(customer));
+    }
+}

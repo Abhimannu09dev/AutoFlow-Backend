@@ -38,4 +38,6 @@ public interface IVehicleService
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
+
+    Task<List<Guid>> GetUserIdsBySearchQueryAsync(string normalizedQuery, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Extensions;
 using AutoFlow_Backend.Application.DTOs.Parts;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace AutoFlow_Backend.Controllers;
 [Route("api/parts")]
 [Authorize(Roles = "Admin,Staff")]
 [Tags("Parts Inventory")]
-public class PartsController : ControllerBase
+public class PartsController : BaseController
 {
     private readonly IPartService _partService;
 
@@ -35,7 +36,7 @@ public class PartsController : ControllerBase
     {
         var response = await _partService.CreateAsync(request, cancellationToken);
         if (!response.IsSuccess)
-            return BadRequest(response);
+            return response.ToActionResult();
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
 
@@ -95,7 +96,7 @@ public class PartsController : ControllerBase
     {
         var response = await _partService.GetByIdAsync(id, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
         return Ok(response);
     }
 
@@ -118,8 +119,7 @@ public class PartsController : ControllerBase
     {
         var response = await _partService.UpdateAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
-            return response.ErrorType == ErrorType.NotFound
-                ? NotFound(response) : BadRequest(response);
+            return response.ToActionResult();
         return Ok(response);
     }
 
@@ -137,7 +137,7 @@ public class PartsController : ControllerBase
     {
         var response = await _partService.DeleteAsync(id, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
         return Ok(response);
     }
 }
