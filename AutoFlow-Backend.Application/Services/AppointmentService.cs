@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
 
@@ -61,7 +62,7 @@ public class AppointmentService : IAppointmentService
         await _appointmentRepository.AddAsync(appointment, cancellationToken);
         await _appointmentRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Appointment created successfully.", Map(appointment));
+        return ApiResponseFactory.Ok("Appointment created successfully.", AppointmentMapper.ToResponse(appointment));
     }
 
     public async Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
@@ -88,7 +89,7 @@ public class AppointmentService : IAppointmentService
             return ApiResponseFactory.Fail<List<AppointmentResponse>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments.Select(AppointmentMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<AppointmentResponse>> GetByIdAsync(
@@ -108,17 +109,6 @@ public class AppointmentService : IAppointmentService
                 return ApiResponseFactory.FailNotFound<AppointmentResponse>("Appointment not found.");
         }
 
-        return ApiResponseFactory.Ok("Appointment retrieved successfully.", Map(appointment));
+        return ApiResponseFactory.Ok("Appointment retrieved successfully.", AppointmentMapper.ToResponse(appointment));
     }
-
-    private static AppointmentResponse Map(Appointment a) => new()
-    {
-        Id = a.Id,
-        CustomerId = a.CustomerId,
-        Date = a.Date,
-        Time = a.Time,
-        Status = a.Status,
-        CreatedAt = a.CreatedAt,
-        UpdatedAt = a.UpdatedAt
-    };
 }

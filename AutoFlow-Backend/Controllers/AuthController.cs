@@ -9,13 +9,15 @@ namespace AutoFlow_Backend.Controllers;
 [ApiController]
 [Route("api/auth")]
 [Tags("Authentication")]
-public class AuthController : ControllerBase
+public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
+    private readonly IRegistrationService _registrationService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IRegistrationService registrationService)
     {
         _authService = authService;
+        _registrationService = registrationService;
     }
 
     /// <summary>
@@ -34,7 +36,7 @@ public class AuthController : ControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _authService.RegisterAsync(request, cancellationToken);
+        var response = await _registrationService.RegisterAsync(request, cancellationToken);
         return response.IsSuccess ? Ok(response) : BadRequest(response);
     }
 

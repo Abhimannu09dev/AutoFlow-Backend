@@ -3,7 +3,6 @@ using AutoFlow_Backend.Converters;
 using AutoFlow_Backend.Infrastructure;
 using AutoFlow_Backend.Infrastructure.Identity;
 using AutoFlow_Backend.Middleware;
-using AutoFlow_Backend.Filters;
 using AutoFlow_Backend.Application.Common;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,10 +26,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<ApiResponseFilter>();
-})
+builder.Services.AddControllers()
 .ConfigureApiBehaviorOptions(options =>
 {
     options.SuppressModelStateInvalidFilter = true;

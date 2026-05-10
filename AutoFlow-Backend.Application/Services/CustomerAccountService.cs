@@ -1,5 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AutoFlow_Backend.Application.Services;

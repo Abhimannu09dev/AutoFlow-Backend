@@ -1,5 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vendors;
+using AutoFlow_Backend.Extensions;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +35,7 @@ public class VendorsController : ControllerBase
     {
         var response = await _vendorService.CreateAsync(request, cancellationToken);
         if (!response.IsSuccess)
-            return response.ErrorType == ErrorType.NotFound ? NotFound(response) : BadRequest(response);
+            return response.ToActionResult();
         return Ok(response);
     }
 
@@ -90,7 +91,7 @@ public class VendorsController : ControllerBase
     {
         var response = await _vendorService.UpdateAsync(id, request, cancellationToken);
         if (!response.IsSuccess)
-            return response.ErrorType == ErrorType.NotFound ? NotFound(response) : BadRequest(response);
+            return response.ToActionResult();
         return Ok(response);
     }
 
@@ -127,8 +128,6 @@ public class VendorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _vendorService.SearchAsync(query, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

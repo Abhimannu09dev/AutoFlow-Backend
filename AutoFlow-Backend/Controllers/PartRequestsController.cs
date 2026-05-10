@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.PartRequests;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,10 +37,7 @@ public class PartRequestsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _partRequestService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -55,9 +53,6 @@ public class PartRequestsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _partRequestService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

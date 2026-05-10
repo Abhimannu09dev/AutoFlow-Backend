@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Extensions;
 using AutoFlow_Backend.Application.DTOs.Appointments;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -37,10 +38,7 @@ public class AppointmentsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -56,10 +54,7 @@ public class AppointmentsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -79,9 +74,6 @@ public class AppointmentsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _appointmentService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return NotFound(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 }

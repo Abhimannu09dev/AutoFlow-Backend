@@ -5,7 +5,9 @@ using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 
 namespace AutoFlow_Backend.Application.Services;
@@ -24,6 +26,8 @@ public class CustomerService : ICustomerService
     private readonly IIdentityService _identityService;
     private readonly ICustomerAccountService _customerAccountService;
     private readonly ILogger<CustomerService> _logger;
+    private readonly IValidator<CustomerCreateDto> _createValidator;
+    private readonly IValidator<CustomerUpdateDto> _updateValidator;
 
     public CustomerService(
         ICustomerRepository customerRepository,
@@ -32,7 +36,9 @@ public class CustomerService : ICustomerService
         IAppointmentRepository appointmentRepository,
         IIdentityService identityService,
         ICustomerAccountService customerAccountService,
-        ILogger<CustomerService> logger)
+        ILogger<CustomerService> logger,
+        IValidator<CustomerCreateDto> createValidator,
+        IValidator<CustomerUpdateDto> updateValidator)
     {
         _customerRepository = customerRepository;
         _vehicleService = vehicleService;
@@ -41,17 +47,20 @@ public class CustomerService : ICustomerService
         _identityService = identityService;
         _customerAccountService = customerAccountService;
         _logger = logger;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> CreateAsync(
         CustomerCreateDto request,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = Validate(request.FullName, request.Email, request.Phone, request.Address);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
+        var validationResult = await _createValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
-        var normalizedEmail = NormalizeEmail(request.Email);
+        var normalizedEmail = StringNormalizer.NormalizeEmail(request.Email);
 
         var emailExistsInUsers = await _identityService.UserExistsByEmailAsync(normalizedEmail, null, cancellationToken);
         if (emailExistsInUsers)
@@ -69,8 +78,8 @@ public class CustomerService : ICustomerService
             var provisionResult = await _customerAccountService.ProvisionAsync(
                 request.FullName.Trim(),
                 normalizedEmail,
-                NormalizeOptional(request.Phone),
-                NormalizeOptional(request.Address),
+                StringNormalizer.NormalizeOptional(request.Phone),
+                StringNormalizer.NormalizeOptional(request.Address),
                 cancellationToken);
 
             if (!provisionResult.IsSuccess)
@@ -84,8 +93,8 @@ public class CustomerService : ICustomerService
         {
             FullName = request.FullName.Trim(),
             Email = normalizedEmail,
-            Phone = NormalizeOptional(request.Phone),
-            Address = NormalizeOptional(request.Address),
+            Phone = StringNormalizer.NormalizeOptional(request.Phone),
+            Address = StringNormalizer.NormalizeOptional(request.Address),
             ApplicationUserId = applicationUserId,
             CreatedAt = DateTime.UtcNow
         };
@@ -115,14 +124,14 @@ public class CustomerService : ICustomerService
             message += " Vehicle not created: Customer does not have a linked user account.";
         }
 
-        return ApiResponseFactory.Ok(message, Map(customer));
+        return ApiResponseFactory.Ok(message, CustomerMapper.ToResponse(customer));
     }
 
     public async Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
         var customers = await _customerRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Customers retrieved successfully.", customers.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Customers retrieved successfully.", customers.Select(CustomerMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(
@@ -133,7 +142,7 @@ public class CustomerService : ICustomerService
         if (customer is null)
             return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer not found.");
 
-        return ApiResponseFactory.Ok("Customer retrieved successfully.", Map(customer));
+        return ApiResponseFactory.Ok("Customer retrieved successfully.", CustomerMapper.ToResponse(customer));
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> UpdateAsync(
@@ -141,28 +150,29 @@ public class CustomerService : ICustomerService
         CustomerUpdateDto request,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = Validate(request.FullName, request.Email, request.Phone, request.Address);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
+        var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var customer = await _customerRepository.GetByIdForUpdateAsync(id, cancellationToken);
         if (customer is null)
             return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer not found.");
 
-        var normalizedEmail = NormalizeEmail(request.Email);
+        var normalizedEmail = StringNormalizer.NormalizeEmail(request.Email);
         var emailExists = await _customerRepository.EmailExistsAsync(normalizedEmail, id, cancellationToken);
         if (emailExists)
             return ApiResponseFactory.FailConflict<CustomerResponseDto>("Email is already registered.");
 
         customer.FullName = request.FullName.Trim();
         customer.Email = normalizedEmail;
-        customer.Phone = NormalizeOptional(request.Phone);
-        customer.Address = NormalizeOptional(request.Address);
+        customer.Phone = StringNormalizer.NormalizeOptional(request.Phone);
+        customer.Address = StringNormalizer.NormalizeOptional(request.Address);
 
         _customerRepository.Update(customer);
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Customer updated successfully.", Map(customer));
+        return ApiResponseFactory.Ok("Customer updated successfully.", CustomerMapper.ToResponse(customer));
     }
 
     public async Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(
@@ -179,7 +189,7 @@ public class CustomerService : ICustomerService
         var matchingUserIds = await _vehicleService.GetUserIdsBySearchQueryAsync(normalizedLower, cancellationToken);
         var customers = await _customerRepository.SearchAsync(normalizedLower, matchingUserIds, customerIdMatch, cancellationToken);
 
-        return ApiResponseFactory.Ok("Customers searched successfully.", customers.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Customers searched successfully.", customers.Select(CustomerMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(
@@ -191,7 +201,7 @@ public class CustomerService : ICustomerService
             return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer not found.");
 
         var purchases = await _saleRepository.GetByCustomerIdAsync(customerId, cancellationToken);
-        return ApiResponseFactory.Ok("Customer purchases retrieved successfully.", purchases.Select(MapSale).ToList());
+        return ApiResponseFactory.Ok("Customer purchases retrieved successfully.", purchases.Select(s => SaleMapper.ToSaleResponse(s)).ToList());
     }
 
     public async Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(
@@ -203,7 +213,7 @@ public class CustomerService : ICustomerService
             return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer not found.");
 
         var services = await _appointmentRepository.GetByCustomerIdAsync(customerId, cancellationToken);
-        return ApiResponseFactory.Ok("Customer services retrieved successfully.", services.Select(MapAppointment).ToList());
+        return ApiResponseFactory.Ok("Customer services retrieved successfully.", services.Select(a => AppointmentMapper.ToResponse(a)).ToList());
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> AddVehicleAsync(
@@ -237,70 +247,6 @@ public class CustomerService : ICustomerService
         return await _vehicleService.GetMyVehiclesAsync(customer.ApplicationUserId.Value, cancellationToken);
     }
 
-    private static CustomerResponseDto Map(Customer customer) => new()
-    {
-        Id = customer.Id,
-        FullName = customer.FullName,
-        Email = customer.Email,
-        Phone = customer.Phone,
-        Address = customer.Address,
-        CreatedAt = customer.CreatedAt,
-        ApplicationUserId = customer.ApplicationUserId
-    };
-
-    private static SaleResponse MapSale(Sale sale) => new()
-    {
-        Id = sale.Id,
-        CustomerId = sale.CustomerId,
-        CustomerName = sale.Customer?.FullName ?? string.Empty,
-        StaffId = sale.StaffId,
-        SaleDate = sale.SaleDate,
-        SubTotal = sale.SubTotal,
-        DiscountAmount = sale.DiscountAmount,
-        TotalAmount = sale.TotalAmount,
-        LoyaltyDiscountApplied = sale.DiscountAmount > 0,
-        PaymentMethod = sale.PaymentMethod,
-        Status = sale.Status,
-        Notes = sale.Notes,
-        CreatedAt = sale.CreatedAt,
-        Items = sale.SaleItems.Select(item => new SaleItemResponse
-        {
-            Id = item.Id,
-            PartId = item.PartId,
-            PartName = item.Part?.PartName ?? string.Empty,
-            Quantity = item.Quantity,
-            UnitPrice = item.UnitPrice,
-            SubTotal = item.SubTotal
-        }).ToList()
-    };
-
-    private static AppointmentResponse MapAppointment(Appointment appointment) => new()
-    {
-        Id = appointment.Id,
-        CustomerId = appointment.CustomerId,
-        Date = appointment.Date,
-        Time = appointment.Time,
-        Status = appointment.Status,
-        CreatedAt = appointment.CreatedAt,
-        UpdatedAt = appointment.UpdatedAt
-    };
-
-    private static List<string> ValidatePatch(CustomerPatchDto request)
-    {
-        var errors = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(request.FullName) && request.FullName.Trim().Length > FullNameMaxLength)
-            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(request.Phone) && request.Phone.Trim().Length > PhoneMaxLength)
-            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(request.Address) && request.Address.Trim().Length > AddressMaxLength)
-            errors.Add($"Address must be at most {AddressMaxLength} characters.");
-
-        return errors;
-    }
-
     private static List<string> Validate(string? fullName, string? email, string? phone, string? address)
     {
         var errors = new List<string>();
@@ -323,13 +269,4 @@ public class CustomerService : ICustomerService
 
         return errors;
     }
-
-    private static string NormalizeVehicleNumber(string vehicleNumber) =>
-        vehicleNumber.Trim().ToUpperInvariant();
-
-    private static string NormalizeEmail(string email) =>
-        email.Trim().ToLowerInvariant();
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

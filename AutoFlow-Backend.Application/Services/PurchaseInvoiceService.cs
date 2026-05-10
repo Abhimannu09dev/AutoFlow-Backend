@@ -4,6 +4,7 @@ using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -12,15 +13,18 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
     private readonly IPurchaseInvoiceRepository _purchaseInvoiceRepository;
     private readonly IPartRepository _partRepository;
     private readonly IVendorRepository _vendorRepository;
+    private readonly DbContext _context;
 
     public PurchaseInvoiceService(
         IPurchaseInvoiceRepository purchaseInvoiceRepository,
         IPartRepository partRepository,
-        IVendorRepository vendorRepository)
+        IVendorRepository vendorRepository,
+        DbContext context)
     {
         _purchaseInvoiceRepository = purchaseInvoiceRepository;
         _partRepository = partRepository;
         _vendorRepository = vendorRepository;
+        _context = context;
     }
 
     public async Task<ApiResponse<PurchaseInvoiceResponse>> CreateAsync(
@@ -68,30 +72,43 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
             });
         }
 
-        foreach (var (item, part) in resolvedItems)
+        PurchaseInvoice? invoice = null;
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            part.StockQuantity += item.Quantity;
-            part.UpdatedAt = DateTime.UtcNow;
-            _partRepository.Update(part);
+            foreach (var (item, part) in resolvedItems)
+            {
+                part.StockQuantity += item.Quantity;
+                part.UpdatedAt = DateTime.UtcNow;
+                _partRepository.Update(part);
+            }
+
+            invoice = new PurchaseInvoice
+            {
+                Id = Guid.NewGuid(),
+                VendorId = request.VendorId,
+                CreatedByStaffId = staffId,
+                InvoiceDate = DateTime.UtcNow,
+                TotalAmount = totalAmount,
+                Status = PurchaseInvoiceStatus.Received,
+                Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                CreatedAt = DateTime.UtcNow,
+                Items = invoiceItems
+            };
+
+            await _purchaseInvoiceRepository.AddAsync(invoice, cancellationToken);
+            await _purchaseInvoiceRepository.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
 
-        var invoice = new PurchaseInvoice
-        {
-            Id = Guid.NewGuid(),
-            VendorId = request.VendorId,
-            CreatedByStaffId = staffId,
-            InvoiceDate = DateTime.UtcNow,
-            TotalAmount = totalAmount,
-            Status = PurchaseInvoiceStatus.Received,
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-            CreatedAt = DateTime.UtcNow,
-            Items = invoiceItems
-        };
-
-        await _purchaseInvoiceRepository.AddAsync(invoice, cancellationToken);
-        await _purchaseInvoiceRepository.SaveChangesAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Purchase invoice created successfully.", MapToResponse(invoice, vendor.VendorName));
+        return ApiResponseFactory.Ok("Purchase invoice created successfully.", MapToResponse(invoice!, vendor.VendorName));
     }
 
     public async Task<ApiResponse<List<PurchaseInvoiceResponse>>> GetAllAsync(CancellationToken cancellationToken = default)

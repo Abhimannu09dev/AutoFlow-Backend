@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AutoFlow_Backend.Controllers;
@@ -39,7 +40,7 @@ public class VehiclesController : BaseController
 
         var response = await _vehicleService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return BadRequest(response);
+            return response.ToActionResult();
 
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
@@ -81,7 +82,7 @@ public class VehiclesController : BaseController
 
         var response = await _vehicleService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
 
         return Ok(response);
     }
@@ -108,12 +109,7 @@ public class VehiclesController : BaseController
 
         var response = await _vehicleService.UpdateAsync(id, request, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-        {
-            if (response.ErrorType == ErrorType.NotFound)
-                return NotFound(response);
-
-            return BadRequest(response);
-        }
+            return response.ToActionResult();
 
         return Ok(response);
     }
@@ -137,7 +133,7 @@ public class VehiclesController : BaseController
 
         var response = await _vehicleService.DeleteAsync(id, userId, isStaffOrAdmin, cancellationToken);
         if (!response.IsSuccess)
-            return NotFound(response);
+            return response.ToActionResult();
 
         return Ok(response);
     }

@@ -1,9 +1,9 @@
-﻿using AutoFlow_Backend.Domain.Entities;
+﻿using AutoFlow_Backend.Application.DTOs.Sales;
 
 namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IEmailService
 {
     Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default);
-    Task SendInvoiceAsync(Sale sale, CancellationToken cancellationToken = default);
+    Task SendInvoiceAsync(SaleInvoiceDto invoice, CancellationToken cancellationToken = default);
 }

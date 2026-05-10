@@ -4,7 +4,9 @@ using AutoFlow_Backend.Application.DTOs.Customers;
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -13,15 +15,18 @@ public class CustomerSelfService : ICustomerSelfService
     private readonly ICustomerRepository _customerRepository;
     private readonly ISaleRepository _saleRepository;
     private readonly IAppointmentRepository _appointmentRepository;
+    private readonly IValidator<CustomerPatchDto> _validator;
 
     public CustomerSelfService(
         ICustomerRepository customerRepository,
         ISaleRepository saleRepository,
-        IAppointmentRepository appointmentRepository)
+        IAppointmentRepository appointmentRepository,
+        IValidator<CustomerPatchDto> validator)
     {
         _customerRepository = customerRepository;
         _saleRepository = saleRepository;
         _appointmentRepository = appointmentRepository;
+        _validator = validator;
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetMyPurchasesAsync(
@@ -33,7 +38,7 @@ public class CustomerSelfService : ICustomerSelfService
             return ApiResponseFactory.FailNotFound<List<SaleResponse>>("Customer profile not found.");
 
         var purchases = await _saleRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
-        return ApiResponseFactory.Ok("Your purchase history retrieved successfully.", purchases.Select(MapSale).ToList());
+        return ApiResponseFactory.Ok("Your purchase history retrieved successfully.", purchases.Select(s => SaleMapper.ToSaleResponse(s)).ToList());
     }
 
     public async Task<ApiResponse<List<AppointmentResponse>>> GetMyServicesAsync(
@@ -45,7 +50,7 @@ public class CustomerSelfService : ICustomerSelfService
             return ApiResponseFactory.FailNotFound<List<AppointmentResponse>>("Customer profile not found.");
 
         var services = await _appointmentRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
-        return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(MapAppointment).ToList());
+        return ApiResponseFactory.Ok("Your service history retrieved successfully.", services.Select(a => AppointmentMapper.ToResponse(a)).ToList());
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> GetMyProfileAsync(
@@ -56,7 +61,7 @@ public class CustomerSelfService : ICustomerSelfService
         if (customer is null)
             return ApiResponseFactory.FailNotFound<CustomerResponseDto>("Customer profile not found.");
 
-        return ApiResponseFactory.Ok("Profile retrieved successfully.", Map(customer));
+        return ApiResponseFactory.Ok("Profile retrieved successfully.", CustomerMapper.ToResponse(customer));
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> UpdateMyProfileAsync(
@@ -64,9 +69,10 @@ public class CustomerSelfService : ICustomerSelfService
         CustomerPatchDto request,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = ValidatePatch(request);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(validationErrors);
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<CustomerResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var customer = await _customerRepository.GetByApplicationUserIdForUpdateAsync(userId, cancellationToken);
         if (customer is null)
@@ -76,53 +82,16 @@ public class CustomerSelfService : ICustomerSelfService
             customer.FullName = request.FullName.Trim();
 
         if (request.Phone is not null)
-            customer.Phone = NormalizeOptional(request.Phone);
+            customer.Phone = StringNormalizer.NormalizeOptional(request.Phone);
 
         if (request.Address is not null)
-            customer.Address = NormalizeOptional(request.Address);
+            customer.Address = StringNormalizer.NormalizeOptional(request.Address);
 
         _customerRepository.Update(customer);
         await _customerRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Profile updated successfully.", Map(customer));
+        return ApiResponseFactory.Ok("Profile updated successfully.", CustomerMapper.ToResponse(customer));
     }
-
-    private static CustomerResponseDto Map(Customer customer) => new()
-    {
-        Id = customer.Id,
-        FullName = customer.FullName,
-        Email = customer.Email,
-        Phone = customer.Phone,
-        Address = customer.Address,
-        CreatedAt = customer.CreatedAt,
-        ApplicationUserId = customer.ApplicationUserId
-    };
-
-    private static SaleResponse MapSale(Sale sale) => new()
-    {
-        Id = sale.Id,
-        InvoiceNumber = sale.InvoiceNumber,
-        CustomerId = sale.CustomerId,
-        SaleDate = sale.SaleDate,
-        SubTotal = sale.SubTotal,
-        DiscountAmount = sale.DiscountAmount,
-        TotalAmount = sale.TotalAmount,
-        LoyaltyDiscountApplied = sale.DiscountAmount > 0,
-        PaymentMethod = sale.PaymentMethod,
-        Status = sale.Status,
-        CreatedAt = sale.CreatedAt
-    };
-
-    private static AppointmentResponse MapAppointment(Appointment appointment) => new()
-    {
-        Id = appointment.Id,
-        CustomerId = appointment.CustomerId,
-        Date = appointment.Date,
-        Time = appointment.Time,
-        Status = appointment.Status,
-        CreatedAt = appointment.CreatedAt,
-        UpdatedAt = appointment.UpdatedAt
-    };
 
     private const int FullNameMaxLength = 150;
     private const int PhoneMaxLength = 30;
@@ -143,7 +112,4 @@ public class CustomerSelfService : ICustomerSelfService
 
         return errors;
     }
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

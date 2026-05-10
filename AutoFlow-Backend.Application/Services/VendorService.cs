@@ -2,34 +2,36 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vendors;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class VendorService : IVendorService
 {
-    private const int VendorNameMaxLength = 150;
-    private const int ContactPersonMaxLength = 100;
-    private const int PhoneMaxLength = 20;
-    private const int EmailMaxLength = 200;
-    private const int AddressMaxLength = 300;
-
     private readonly IVendorRepository _vendorRepository;
+    private readonly IValidator<CreateVendorRequest> _createValidator;
+    private readonly IValidator<UpdateVendorRequest> _updateValidator;
 
-    public VendorService(IVendorRepository vendorRepository)
+    public VendorService(
+        IVendorRepository vendorRepository,
+        IValidator<CreateVendorRequest> createValidator,
+        IValidator<UpdateVendorRequest> updateValidator)
     {
         _vendorRepository = vendorRepository;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<ApiResponse<VendorResponse>> CreateAsync(
         CreateVendorRequest request,
         CancellationToken cancellationToken = default)
     {
-        var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
-        if (errors.Count > 0)
-        {
-            return ApiResponseFactory.FailFromValidation<VendorResponse>(errors);
-        }
+        var validationResult = await _createValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<VendorResponse>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var normalizedName = request.VendorName.Trim().ToLowerInvariant();
         var duplicateExists = await _vendorRepository.ExistsActiveByNameAsync(normalizedName, null, cancellationToken);
@@ -43,10 +45,10 @@ public class VendorService : IVendorService
         {
             Id = Guid.NewGuid(),
             VendorName = request.VendorName.Trim(),
-            ContactPerson = NormalizeOptional(request.ContactPerson),
+            ContactPerson = StringNormalizer.NormalizeOptional(request.ContactPerson),
             Phone = request.Phone.Trim(),
-            Email = NormalizeOptional(request.Email),
-            Address = NormalizeOptional(request.Address),
+            Email = StringNormalizer.NormalizeOptional(request.Email),
+            Address = StringNormalizer.NormalizeOptional(request.Address),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -54,13 +56,13 @@ public class VendorService : IVendorService
         await _vendorRepository.AddAsync(vendor, cancellationToken);
         await _vendorRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vendor created successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor created successfully.", vendor.ToResponse());
     }
 
     public async Task<ApiResponse<List<VendorResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var vendors = await _vendorRepository.GetActiveAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(v => v.ToResponse()).ToList());
     }
 
     public async Task<ApiResponse<VendorResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -72,7 +74,7 @@ public class VendorService : IVendorService
             return ApiResponseFactory.Fail<VendorResponse>("Vendor not found.");
         }
 
-        return ApiResponseFactory.Ok("Vendor retrieved successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor retrieved successfully.", vendor.ToResponse());
     }
 
     public async Task<ApiResponse<VendorResponse>> UpdateAsync(
@@ -80,11 +82,10 @@ public class VendorService : IVendorService
         UpdateVendorRequest request,
         CancellationToken cancellationToken = default)
     {
-        var errors = ValidateCreateOrUpdate(request.VendorName, request.Phone, request.Email, request.ContactPerson, request.Address);
-        if (errors.Count > 0)
-        {
-            return ApiResponseFactory.FailFromValidation<VendorResponse>(errors);
-        }
+        var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<VendorResponse>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var vendor = await _vendorRepository.GetActiveByIdForUpdateAsync(id, cancellationToken);
 
@@ -102,16 +103,16 @@ public class VendorService : IVendorService
         }
 
         vendor.VendorName = request.VendorName.Trim();
-        vendor.ContactPerson = NormalizeOptional(request.ContactPerson);
+        vendor.ContactPerson = StringNormalizer.NormalizeOptional(request.ContactPerson);
         vendor.Phone = request.Phone.Trim();
-        vendor.Email = NormalizeOptional(request.Email);
-        vendor.Address = NormalizeOptional(request.Address);
+        vendor.Email = StringNormalizer.NormalizeOptional(request.Email);
+        vendor.Address = StringNormalizer.NormalizeOptional(request.Address);
         vendor.UpdatedAt = DateTime.UtcNow;
 
         _vendorRepository.Update(vendor);
         await _vendorRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vendor updated successfully.", Map(vendor));
+        return ApiResponseFactory.Ok("Vendor updated successfully.", vendor.ToResponse());
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -137,97 +138,6 @@ public class VendorService : IVendorService
         CancellationToken cancellationToken = default)
     {
         var vendors = await _vendorRepository.SearchActiveAsync(query, cancellationToken);
-        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(Map).ToList());
-    }
-
-    private static VendorResponse Map(Vendor vendor)
-    {
-        return new VendorResponse
-        {
-            Id = vendor.Id,
-            VendorName = vendor.VendorName,
-            ContactPerson = vendor.ContactPerson,
-            Phone = vendor.Phone,
-            Email = vendor.Email,
-            Address = vendor.Address,
-            IsActive = vendor.IsActive,
-            CreatedAt = vendor.CreatedAt,
-            UpdatedAt = vendor.UpdatedAt
-        };
-    }
-
-    private static List<string> ValidateCreateOrUpdate(
-        string? vendorName,
-        string? phone,
-        string? email,
-        string? contactPerson,
-        string? address)
-    {
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(vendorName))
-        {
-            errors.Add("Vendor name is required.");
-        }
-        else if (vendorName.Trim().Length > VendorNameMaxLength)
-        {
-            errors.Add($"Vendor name must be at most {VendorNameMaxLength} characters.");
-        }
-
-        if (string.IsNullOrWhiteSpace(phone))
-        {
-            errors.Add("Phone is required.");
-        }
-        else if (phone.Trim().Length > PhoneMaxLength)
-        {
-            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            if (email.Trim().Length > EmailMaxLength)
-            {
-                errors.Add($"Email must be at most {EmailMaxLength} characters.");
-            }
-            else if (!IsValidEmail(email.Trim()))
-            {
-                errors.Add("Email must be valid.");
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(contactPerson) && contactPerson.Trim().Length > ContactPersonMaxLength)
-        {
-            errors.Add($"Contact person must be at most {ContactPersonMaxLength} characters.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
-        {
-            errors.Add($"Address must be at most {AddressMaxLength} characters.");
-        }
-
-        return errors;
-    }
-
-    private static string? NormalizeOptional(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return value.Trim();
-    }
-
-    private static bool IsValidEmail(string email)
-    {
-        try
-        {
-            var _ = new System.Net.Mail.MailAddress(email);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(v => v.ToResponse()).ToList());
     }
 }

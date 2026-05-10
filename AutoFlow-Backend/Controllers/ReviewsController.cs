@@ -1,6 +1,7 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reviews;
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,10 +37,7 @@ public class ReviewsController : BaseController
         var isStaffOrAdmin = IsStaffOrAdmin();
 
         var response = await _reviewService.CreateAsync(request, userId, isStaffOrAdmin, cancellationToken);
-        if (!response.IsSuccess)
-            return BadRequest(response);
-
-        return Ok(response);
+        return response.ToActionResult();
     }
 
     /// <summary>

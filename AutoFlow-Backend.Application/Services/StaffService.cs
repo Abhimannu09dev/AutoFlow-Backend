@@ -2,38 +2,45 @@
 using AutoFlow_Backend.Application.DTOs.Staff;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
+using Microsoft.Extensions.Logging;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class StaffService : IStaffService
 {
     private const string StaffRole = "Staff";
-    private const int StaffCodeMaxLength = 30;
-    private const int FullNameMaxLength = 200;
-    private const int EmailMaxLength = 200;
-    private const int PhoneMaxLength = 30;
-    private const int AddressMaxLength = 300;
-    private const int PositionMaxLength = 100;
 
     private readonly IIdentityService _identityService;
     private readonly IStaffRepository _staffRepository;
+    private readonly IValidator<CreateStaffRequest> _createValidator;
+    private readonly IValidator<UpdateStaffRequest> _updateValidator;
+    private readonly ILogger<StaffService> _logger;
 
     public StaffService(
         IIdentityService identityService,
-        IStaffRepository staffRepository)
+        IStaffRepository staffRepository,
+        IValidator<CreateStaffRequest> createValidator,
+        IValidator<UpdateStaffRequest> updateValidator,
+        ILogger<StaffService> logger)
     {
         _identityService = identityService;
         _staffRepository = staffRepository;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<StaffResponse>> CreateAsync(
         CreateStaffRequest request,
         CancellationToken cancellationToken = default)
     {
-        var errors = ValidateForCreate(request);
-        if (errors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
+        var validationResult = await _createValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<StaffResponse>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
@@ -57,8 +64,8 @@ public class StaffService : IStaffService
             email: normalizedEmail,
             password: request.Password,
             fullName: request.FullName.Trim(),
-            phone: NormalizeOptional(request.Phone),
-            address: NormalizeOptional(request.Address),
+            phone: StringNormalizer.NormalizeOptional(request.Phone),
+            address: StringNormalizer.NormalizeOptional(request.Address),
             cancellationToken: cancellationToken);
 
         if (!createSucceeded || userId is null)
@@ -85,8 +92,8 @@ public class StaffService : IStaffService
             StaffCode = staffCode,
             FullName = request.FullName.Trim(),
             Email = normalizedEmail,
-            PhoneNumber = NormalizeOptional(request.Phone),
-            Address = NormalizeOptional(request.Address),
+            PhoneNumber = StringNormalizer.NormalizeOptional(request.Phone),
+            Address = StringNormalizer.NormalizeOptional(request.Address),
             Position = role,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -95,14 +102,14 @@ public class StaffService : IStaffService
         await _staffRepository.AddAsync(staffProfile, cancellationToken);
         await _staffRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Staff created successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff created successfully.", staffProfile.ToResponse());
     }
 
     public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
         var staffProfiles = await _staffRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfiles.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfiles.Select(s => s.ToResponse()).ToList());
     }
 
     public async Task<ApiResponse<StaffResponse>> GetByIdAsync(
@@ -113,7 +120,7 @@ public class StaffService : IStaffService
         if (staffProfile is null)
             return ApiResponseFactory.FailNotFound<StaffResponse>("Staff not found.");
 
-        return ApiResponseFactory.Ok("Staff retrieved successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfile.ToResponse());
     }
 
     public async Task<ApiResponse<StaffResponse>> UpdateAsync(
@@ -121,9 +128,10 @@ public class StaffService : IStaffService
         UpdateStaffRequest request,
         CancellationToken cancellationToken = default)
     {
-        var errors = ValidateForUpdate(request);
-        if (errors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<StaffResponse>(errors);
+        var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<StaffResponse>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var staffProfile = await _staffRepository.GetByIdForUpdateAsync(id, cancellationToken);
         if (staffProfile is null)
@@ -144,8 +152,8 @@ public class StaffService : IStaffService
             userId: staffProfile.ApplicationUserId.ToString(),
             email: normalizedEmail,
             fullName: request.FullName.Trim(),
-            phone: NormalizeOptional(request.Phone),
-            address: NormalizeOptional(request.Address),
+            phone: StringNormalizer.NormalizeOptional(request.Phone),
+            address: StringNormalizer.NormalizeOptional(request.Address),
             cancellationToken: cancellationToken);
 
         if (!updateSucceeded)
@@ -153,15 +161,15 @@ public class StaffService : IStaffService
 
         staffProfile.FullName = request.FullName.Trim();
         staffProfile.Email = normalizedEmail;
-        staffProfile.PhoneNumber = NormalizeOptional(request.Phone);
-        staffProfile.Address = NormalizeOptional(request.Address);
-        staffProfile.Position = NormalizeOptional(request.Position);
+        staffProfile.PhoneNumber = StringNormalizer.NormalizeOptional(request.Phone);
+        staffProfile.Address = StringNormalizer.NormalizeOptional(request.Address);
+        staffProfile.Position = StringNormalizer.NormalizeOptional(request.Position);
         staffProfile.UpdatedAt = DateTime.UtcNow;
 
         _staffRepository.Update(staffProfile);
         await _staffRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Staff updated successfully.", Map(staffProfile));
+        return ApiResponseFactory.Ok("Staff updated successfully.", staffProfile.ToResponse());
     }
 
     public async Task<ApiResponse<bool>> DeactivateAsync(
@@ -218,85 +226,5 @@ public class StaffService : IStaffService
         }
 
         return null;
-    }
-
-    private static StaffResponse Map(Staff staff) => new()
-    {
-        Id = staff.Id,
-        ApplicationUserId = staff.ApplicationUserId,
-        StaffCode = staff.StaffCode,
-        FullName = staff.FullName,
-        Email = staff.Email,
-        Phone = staff.PhoneNumber,
-        Address = staff.Address,
-        Position = staff.Position,
-        IsActive = staff.IsActive,
-        CreatedAt = staff.CreatedAt,
-        UpdatedAt = staff.UpdatedAt
-    };
-
-    private static List<string> ValidateForCreate(CreateStaffRequest request)
-    {
-        var errors = ValidateCommon(
-            request.StaffCode, request.FullName,
-            request.Email, request.Phone, request.Address, null);
-
-        if (string.IsNullOrWhiteSpace(request.Password))
-            errors.Add("Password is required.");
-
-        return errors;
-    }
-
-    private static List<string> ValidateForUpdate(UpdateStaffRequest request) =>
-        ValidateCommon(null, request.FullName,
-            request.Email, request.Phone, request.Address, request.Position);
-
-    private static List<string> ValidateCommon(
-        string? staffCode, string? fullName,
-        string? email, string? phone, string? address, string? position)
-    {
-        var errors = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(staffCode) && staffCode.Trim().Length > StaffCodeMaxLength)
-            errors.Add($"Staff code must be at most {StaffCodeMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(fullName))
-            errors.Add("Full name is required.");
-        else if (fullName.Trim().Length > FullNameMaxLength)
-            errors.Add($"Full name must be at most {FullNameMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(email))
-            errors.Add("Email is required.");
-        else if (email.Trim().Length > EmailMaxLength)
-            errors.Add($"Email must be at most {EmailMaxLength} characters.");
-        else if (!IsValidEmail(email.Trim()))
-            errors.Add("Email must be valid.");
-
-        if (!string.IsNullOrWhiteSpace(phone) && phone.Trim().Length > PhoneMaxLength)
-            errors.Add($"Phone must be at most {PhoneMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(address) && address.Trim().Length > AddressMaxLength)
-            errors.Add($"Address must be at most {AddressMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(position) && position.Trim().Length > PositionMaxLength)
-            errors.Add($"Position must be at most {PositionMaxLength} characters.");
-
-        return errors;
-    }
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static bool IsValidEmail(string email)
-    {
-        try
-        {
-            var _ = new System.Net.Mail.MailAddress(email);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 }

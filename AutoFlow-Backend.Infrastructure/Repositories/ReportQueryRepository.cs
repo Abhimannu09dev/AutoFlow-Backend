@@ -1,6 +1,5 @@
 ﻿using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Application.Models;
-using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
 using AutoFlow_Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -29,19 +28,21 @@ public class ReportQueryRepository : IReportQueryRepository
     public async Task<int> CountActiveStaffAsync(CancellationToken cancellationToken = default) =>
         await _dbContext.Staff.AsNoTracking().CountAsync(s => s.IsActive, cancellationToken);
 
-    public async Task<List<Part>> GetLowStockPartsAsync(CancellationToken cancellationToken = default) =>
+    public async Task<List<LowStockPartReadModel>> GetLowStockPartsAsync(CancellationToken cancellationToken = default) =>
         await _dbContext.Parts.AsNoTracking()
             .Where(p => p.IsActive && p.StockQuantity < p.MinimumStockLevel)
             .OrderBy(p => p.StockQuantity)
             .ThenBy(p => p.PartName)
+            .Select(p => new LowStockPartReadModel(p.Id, p.PartName, p.PartNumber, p.StockQuantity, p.MinimumStockLevel))
             .ToListAsync(cancellationToken);
 
-    public async Task<List<Sale>> GetCompletedSalesByDateRangeAsync(
+    public async Task<List<SaleSummaryReadModel>> GetCompletedSalesByDateRangeAsync(
         DateTime start,
         DateTime end,
         CancellationToken cancellationToken = default) =>
         await _dbContext.Sales.AsNoTracking()
             .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.Status == SaleStatus.Completed)
+            .Select(s => new SaleSummaryReadModel(s.SubTotal, s.DiscountAmount, s.TotalAmount))
             .ToListAsync(cancellationToken);
 
     public async Task<List<CustomerSummaryResult>>
@@ -101,12 +102,22 @@ public class ReportQueryRepository : IReportQueryRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<Sale>> GetOverdueCreditSalesAsync(
+    public async Task<List<OverdueCreditSaleReadModel>> GetOverdueCreditSalesAsync(
         DateTime cutoffDate,
         CancellationToken cancellationToken = default) =>
         await _dbContext.Sales
-            .Include(s => s.Customer)
             .Where(s => s.PaymentMethod == PaymentMethod.Credit && s.SaleDate <= cutoffDate)
-            .AsNoTracking()
+            .Join(_dbContext.Customers.AsNoTracking(),
+                sale => sale.CustomerId,
+                customer => customer.Id,
+                (sale, customer) => new OverdueCreditSaleReadModel(
+                    sale.Id,
+                    sale.CustomerId,
+                    sale.SaleDate,
+                    sale.TotalAmount,
+                    customer.FullName,
+                    customer.Email,
+                    customer.Phone,
+                    customer.Address))
             .ToListAsync(cancellationToken);
 }

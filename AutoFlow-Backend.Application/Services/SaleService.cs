@@ -2,32 +2,39 @@
 using AutoFlow_Backend.Application.DTOs.Sales;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class SaleService : ISaleService
 {
-    private const decimal LoyaltyDiscountThreshold = 5000m;
-    private const decimal LoyaltyDiscountRate = 0.10m;
+    private readonly BusinessRulesSettings _businessRules;
 
     private readonly ISaleRepository _saleRepository;
     private readonly IPartRepository _partRepository;
     private readonly IEmailService _emailService;
     private readonly ILogger<SaleService> _logger;
+    private readonly DbContext _context;
 
     public SaleService(
         ISaleRepository saleRepository,
         IPartRepository partRepository,
         IEmailService emailService,
-        ILogger<SaleService> logger)
+        ILogger<SaleService> logger,
+        DbContext context,
+        IOptions<BusinessRulesSettings> businessRules)
     {
         _saleRepository = saleRepository;
         _partRepository = partRepository;
         _emailService = emailService;
         _logger = logger;
+        _context = context;
+        _businessRules = businessRules.Value;
     }
 
     public async Task<ApiResponse<SaleResponse>> CreateAsync(
@@ -73,47 +80,60 @@ public class SaleService : ISaleService
         }
 
         decimal discountAmount = 0;
-        if (subTotal > LoyaltyDiscountThreshold)
-            discountAmount = Math.Round(subTotal * LoyaltyDiscountRate, 2);
+        if (subTotal > _businessRules.LoyaltyDiscountThreshold)
+            discountAmount = Math.Round(subTotal * _businessRules.LoyaltyDiscountRate, 2);
 
         var totalAmount = subTotal - discountAmount;
 
-        foreach (var (item, part) in resolvedItems)
+        Sale? sale = null;
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            part.StockQuantity -= item.Quantity;
-            part.UpdatedAt = DateTime.UtcNow;
-            _partRepository.Update(part);
+            foreach (var (item, part) in resolvedItems)
+            {
+                part.StockQuantity -= item.Quantity;
+                part.UpdatedAt = DateTime.UtcNow;
+                _partRepository.Update(part);
+            }
+
+            sale = new Sale
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = request.CustomerId,
+                StaffId = staffId,
+                InvoiceNumber = GenerateInvoiceNumber(),
+                SaleDate = DateTime.UtcNow,
+                SubTotal = subTotal,
+                DiscountAmount = discountAmount,
+                TotalAmount = totalAmount,
+                PaymentMethod = request.PaymentMethod,
+                Status = SaleStatus.Completed,
+                Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                CreatedAt = DateTime.UtcNow,
+                SaleItems = saleItems
+            };
+
+            await _saleRepository.AddAsync(sale, cancellationToken);
+            await _saleRepository.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
 
-        var sale = new Sale
-        {
-            Id = Guid.NewGuid(),
-            CustomerId = request.CustomerId,
-            StaffId = staffId,
-            InvoiceNumber = GenerateInvoiceNumber(),
-            SaleDate = DateTime.UtcNow,
-            SubTotal = subTotal,
-            DiscountAmount = discountAmount,
-            TotalAmount = totalAmount,
-            PaymentMethod = request.PaymentMethod,
-            Status = SaleStatus.Completed,
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-            CreatedAt = DateTime.UtcNow,
-            SaleItems = saleItems
-        };
+        await TrySendInvoiceAsync(sale!, cancellationToken);
 
-        await _saleRepository.AddAsync(sale, cancellationToken);
-        await _saleRepository.SaveChangesAsync(cancellationToken);
-
-        await TrySendInvoiceAsync(sale, cancellationToken);
-
-        return ApiResponseFactory.Ok("Sale created successfully.", MapToResponse(sale));
+        return ApiResponseFactory.Ok("Sale created successfully.", SaleMapper.ToResponse(sale!));
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var sales = await _saleRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
+        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(SaleMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<SaleResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -122,13 +142,13 @@ public class SaleService : ISaleService
         if (sale is null)
             return ApiResponseFactory.Fail<SaleResponse>("Sale not found.");
 
-        return ApiResponseFactory.Ok("Sale retrieved successfully.", MapToResponse(sale));
+        return ApiResponseFactory.Ok("Sale retrieved successfully.", SaleMapper.ToResponse(sale));
     }
 
     public async Task<ApiResponse<List<SaleResponse>>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
         var sales = await _saleRepository.GetByCustomerIdAsync(customerId, cancellationToken);
-        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(MapToResponse).ToList());
+        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(SaleMapper.ToResponse).ToList());
     }
 
     public async Task<ApiResponse<bool>> SendInvoiceAsync(Guid saleId, CancellationToken cancellationToken = default)
@@ -140,7 +160,8 @@ public class SaleService : ISaleService
         if (sale.Customer is null || string.IsNullOrWhiteSpace(sale.Customer.Email))
             return ApiResponseFactory.Fail<bool>("Customer email not available. Invoice cannot be sent.");
 
-        await _emailService.SendInvoiceAsync(sale, cancellationToken);
+        var invoiceDto = SaleMapper.ToInvoiceDto(sale);
+        await _emailService.SendInvoiceAsync(invoiceDto, cancellationToken);
 
         sale.InvoiceSentAt = DateTime.UtcNow;
         sale.InvoiceEmail = sale.Customer.Email;
@@ -159,7 +180,8 @@ public class SaleService : ISaleService
 
         try
         {
-            await _emailService.SendInvoiceAsync(sale, cancellationToken);
+            var invoiceDto = SaleMapper.ToInvoiceDto(sale);
+            await _emailService.SendInvoiceAsync(invoiceDto, cancellationToken);
 
             sale.InvoiceSentAt = DateTime.UtcNow;
             sale.InvoiceEmail = sale.Customer.Email;
@@ -186,40 +208,4 @@ public class SaleService : ISaleService
 
     private static string GenerateInvoiceNumber() =>
         $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
-
-    private static SaleResponse MapToResponse(Sale sale)
-    {
-        return new SaleResponse
-        {
-            Id = sale.Id,
-            InvoiceNumber = sale.InvoiceNumber,
-            CustomerId = sale.CustomerId,
-            CustomerName = sale.Customer is not null
-                ? sale.Customer.FullName
-                : string.Empty,
-            StaffId = sale.StaffId,
-            SaleDate = sale.SaleDate,
-            SubTotal = sale.SubTotal,
-            DiscountAmount = sale.DiscountAmount,
-            TotalAmount = sale.TotalAmount,
-            LoyaltyDiscountApplied = sale.DiscountAmount > 0,
-            PaymentMethod = sale.PaymentMethod,
-            Status = sale.Status,
-            Notes = sale.Notes,
-            InvoiceSentAt = sale.InvoiceSentAt,
-            InvoiceEmail = sale.InvoiceEmail,
-            InvoiceFailedAt = sale.InvoiceFailedAt,
-            InvoiceFailureReason = sale.InvoiceFailureReason,
-            CreatedAt = sale.CreatedAt,
-            Items = sale.SaleItems.Select(si => new SaleItemResponse
-            {
-                Id = si.Id,
-                PartId = si.PartId,
-                PartName = si.Part?.PartName ?? string.Empty,
-                Quantity = si.Quantity,
-                UnitPrice = si.UnitPrice,
-                SubTotal = si.SubTotal
-            }).ToList()
-        };
-    }
 }

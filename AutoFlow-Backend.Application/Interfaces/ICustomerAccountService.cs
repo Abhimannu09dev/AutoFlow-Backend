@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.Models;
 
 namespace AutoFlow_Backend.Application.Interfaces;
 
@@ -11,5 +12,3 @@ public interface ICustomerAccountService
         string? address,
         CancellationToken cancellationToken = default);
 }
-
-public sealed record CustomerAccountResult(Guid ApplicationUserId, string WelcomeMessage);

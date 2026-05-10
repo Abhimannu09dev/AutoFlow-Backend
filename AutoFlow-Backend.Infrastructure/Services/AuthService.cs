@@ -1,8 +1,6 @@
 using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Auth;
 using AutoFlow_Backend.Application.Interfaces;
-using AutoFlow_Backend.Application.Interfaces.Repositories;
-using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Infrastructure.Configuration;
 using AutoFlow_Backend.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -19,59 +17,15 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly JwtSettings _jwtSettings;
-    private readonly ICustomerRepository _customerRepository;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        IOptions<JwtSettings> jwtOptions,
-        ICustomerRepository customerRepository)
+        IOptions<JwtSettings> jwtOptions)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _jwtSettings = jwtOptions.Value;
-        _customerRepository = customerRepository;
-    }
-
-    public async Task<ApiResponse<AuthResponse>> RegisterAsync(
-        RegisterRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var existingUser = await _userManager.FindByEmailAsync(request.Email);
-        if (existingUser is not null)
-            return ApiResponseFactory.FailConflict<AuthResponse>("Email is already registered.");
-
-        var user = new ApplicationUser
-        {
-            UserName = request.Email,
-            Email = request.Email,
-            FullName = request.FullName,
-            Address = request.Address,
-            PhoneNumber = request.Phone,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var result = await _userManager.CreateAsync(user, request.Password);
-        if (!result.Succeeded)
-            return ApiResponseFactory.Fail<AuthResponse>(
-                string.Join(" ", result.Errors.Select(e => e.Description)));
-
-        await _userManager.AddToRoleAsync(user, "Customer");
-
-        var customer = new Customer
-        {
-            FullName = request.FullName,
-            Email = request.Email,
-            Phone = request.Phone,
-            Address = request.Address,
-            CreatedAt = DateTime.UtcNow,
-            ApplicationUserId = user.Id
-        };
-
-        await _customerRepository.AddAsync(customer, cancellationToken);
-        await _customerRepository.SaveChangesAsync(cancellationToken);
-
-        return ApiResponseFactory.Ok("Registration successful.", await BuildAuthResponseAsync(user));
     }
 
     public async Task<ApiResponse<AuthResponse>> LoginAsync(

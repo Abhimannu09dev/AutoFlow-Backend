@@ -40,6 +40,9 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        services.Configure<CompanySettings>(configuration.GetSection("Company"));
+        services.Configure<AutoFlow_Backend.Application.Common.BusinessRulesSettings>(
+            configuration.GetSection("BusinessRules"));
 
         services.AddScoped<IVendorRepository, VendorRepository>();
         services.AddScoped<IPartRepository, PartRepository>();
@@ -56,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<INotificationSettings, NotificationSettings>();
 
         services.AddJwtAuthentication(configuration);
 

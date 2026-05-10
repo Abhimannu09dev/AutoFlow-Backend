@@ -2,27 +2,29 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Vehicles;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
+using FluentValidation;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class VehicleService : IVehicleService
 {
-    private const int VehicleNumberMaxLength = 20;
-    private const int VehicleBrandMaxLength = 50;
-    private const int VehicleModelMaxLength = 50;
-    private const int VehicleColorMaxLength = 30;
-    private const int VehicleVinMaxLength = 50;
-
     private readonly IVehicleRepository _vehicleRepository;
     private readonly ICustomerRepository _customerRepository;
+    private readonly IValidator<VehicleCreateDto> _createValidator;
+    private readonly IValidator<VehicleUpdateDto> _updateValidator;
 
     public VehicleService(
         IVehicleRepository vehicleRepository,
-        ICustomerRepository customerRepository)
+        ICustomerRepository customerRepository,
+        IValidator<VehicleCreateDto> createValidator,
+        IValidator<VehicleUpdateDto> updateValidator)
     {
         _vehicleRepository = vehicleRepository;
         _customerRepository = customerRepository;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> CreateAsync(
@@ -31,9 +33,10 @@ public class VehicleService : IVehicleService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = ValidateVehicle(request.VehicleNumber, request.Brand, request.Model, request.Year, request.Color, request.VIN);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(validationErrors);
+        var validationResult = await _createValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         Guid targetUserId;
 
@@ -61,8 +64,8 @@ public class VehicleService : IVehicleService
             Model = request.Model.Trim(),
             Year = request.Year,
             Mileage = request.Mileage,
-            Color = NormalizeOptional(request.Color),
-            VIN = NormalizeOptional(request.VIN),
+            Color = StringNormalizer.NormalizeOptional(request.Color),
+            VIN = StringNormalizer.NormalizeOptional(request.VIN),
             UserId = targetUserId,
             CreatedAt = DateTime.UtcNow
         };
@@ -70,7 +73,7 @@ public class VehicleService : IVehicleService
         await _vehicleRepository.AddAsync(vehicle, cancellationToken);
         await _vehicleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vehicle created successfully.", Map(vehicle));
+        return ApiResponseFactory.Ok("Vehicle created successfully.", vehicle.ToResponse());
     }
 
     public async Task<ApiResponse<List<VehicleResponseDto>>> GetAllAsync(
@@ -93,7 +96,7 @@ public class VehicleService : IVehicleService
             return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", vehicles.Select(Map).ToList());
+        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", vehicles.Select(v => v.ToResponse()).ToList());
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> GetByIdAsync(
@@ -109,7 +112,7 @@ public class VehicleService : IVehicleService
         if (!isStaffOrAdmin && (!requestingUserId.HasValue || vehicle.UserId != requestingUserId.Value))
             return ApiResponseFactory.FailNotFound<VehicleResponseDto>("Vehicle not found.");
 
-        return ApiResponseFactory.Ok("Vehicle retrieved successfully.", Map(vehicle));
+        return ApiResponseFactory.Ok("Vehicle retrieved successfully.", vehicle.ToResponse());
     }
 
     public async Task<ApiResponse<List<VehicleResponseDto>>> GetMyVehiclesAsync(
@@ -117,7 +120,7 @@ public class VehicleService : IVehicleService
         CancellationToken cancellationToken = default)
     {
         var vehicles = await _vehicleRepository.GetByUserIdAsync(userId, cancellationToken);
-        return ApiResponseFactory.Ok("My vehicles retrieved successfully.", vehicles.Select(Map).ToList());
+        return ApiResponseFactory.Ok("My vehicles retrieved successfully.", vehicles.Select(v => v.ToResponse()).ToList());
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> UpdateAsync(
@@ -127,9 +130,10 @@ public class VehicleService : IVehicleService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        var validationErrors = ValidateVehicle(request.VehicleNumber, request.Brand, request.Model, request.Year, request.Color, request.VIN);
-        if (validationErrors.Count > 0)
-            return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(validationErrors);
+        var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return ApiResponseFactory.FailFromValidation<VehicleResponseDto>(
+                validationResult.Errors.Select(e => e.ErrorMessage).ToList());
 
         var vehicle = await _vehicleRepository.GetByIdForUpdateAsync(id, cancellationToken);
         if (vehicle is null)
@@ -142,8 +146,8 @@ public class VehicleService : IVehicleService
         vehicle.Brand = request.Brand.Trim();
         vehicle.Model = request.Model.Trim();
         vehicle.Year = request.Year;
-        vehicle.Color = NormalizeOptional(request.Color);
-        vehicle.VIN = NormalizeOptional(request.VIN);
+        vehicle.Color = StringNormalizer.NormalizeOptional(request.Color);
+        vehicle.VIN = StringNormalizer.NormalizeOptional(request.VIN);
         vehicle.UpdatedAt = DateTime.UtcNow;
 
         if (isStaffOrAdmin && request.Mileage.HasValue)
@@ -154,7 +158,7 @@ public class VehicleService : IVehicleService
         _vehicleRepository.Update(vehicle);
         await _vehicleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vehicle updated successfully.", Map(vehicle));
+        return ApiResponseFactory.Ok("Vehicle updated successfully.", vehicle.ToResponse());
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(
@@ -176,55 +180,6 @@ public class VehicleService : IVehicleService
         return ApiResponseFactory.Ok("Vehicle deleted successfully.", true);
     }
 
-    private static VehicleResponseDto Map(Vehicle vehicle) => new()
-    {
-        Id = vehicle.Id,
-        VehicleNumber = vehicle.VehicleNumber,
-        Brand = vehicle.Brand,
-        Model = vehicle.Model,
-        Year = vehicle.Year,
-        Mileage = vehicle.Mileage,
-        Color = vehicle.Color,
-        VIN = vehicle.VIN,
-        UserId = vehicle.UserId,
-        CreatedAt = vehicle.CreatedAt,
-        UpdatedAt = vehicle.UpdatedAt
-    };
-
-    private static List<string> ValidateVehicle(
-        string? vehicleNumber, string? brand, string? model,
-        int year, string? color, string? vin)
-    {
-        var errors = new List<string>();
-        var currentYear = DateTime.UtcNow.Year;
-
-        if (string.IsNullOrWhiteSpace(vehicleNumber))
-            errors.Add("Vehicle number is required.");
-        else if (vehicleNumber.Trim().Length > VehicleNumberMaxLength)
-            errors.Add($"Vehicle number must be at most {VehicleNumberMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(brand))
-            errors.Add("Brand is required.");
-        else if (brand.Trim().Length > VehicleBrandMaxLength)
-            errors.Add($"Brand must be at most {VehicleBrandMaxLength} characters.");
-
-        if (string.IsNullOrWhiteSpace(model))
-            errors.Add("Model is required.");
-        else if (model.Trim().Length > VehicleModelMaxLength)
-            errors.Add($"Model must be at most {VehicleModelMaxLength} characters.");
-
-        if (year < 1886 || year > currentYear + 1)
-            errors.Add($"Year must be between 1886 and {currentYear + 1}.");
-
-        if (!string.IsNullOrWhiteSpace(color) && color.Trim().Length > VehicleColorMaxLength)
-            errors.Add($"Color must be at most {VehicleColorMaxLength} characters.");
-
-        if (!string.IsNullOrWhiteSpace(vin) && vin.Trim().Length > VehicleVinMaxLength)
-            errors.Add($"VIN must be at most {VehicleVinMaxLength} characters.");
-
-        return errors;
-    }
-
     public async Task<List<Guid>> GetUserIdsBySearchQueryAsync(
         string normalizedQuery,
         CancellationToken cancellationToken = default)
@@ -234,7 +189,4 @@ public class VehicleService : IVehicleService
 
     private static string NormalizeVehicleNumber(string vehicleNumber) =>
         vehicleNumber.Trim().ToUpperInvariant();
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

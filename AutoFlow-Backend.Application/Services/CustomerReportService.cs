@@ -2,18 +2,22 @@ using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.DTOs.Reports;
 using AutoFlow_Backend.Application.Interfaces;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace AutoFlow_Backend.Application.Services;
 
 public class CustomerReportService : ICustomerReportService
 {
-    private const int RegularCustomerMinimumPurchases = 3;
+    private readonly BusinessRulesSettings _businessRules;
 
     private readonly IReportQueryRepository _reportQueryRepository;
 
-    public CustomerReportService(IReportQueryRepository reportQueryRepository)
+    public CustomerReportService(
+        IReportQueryRepository reportQueryRepository,
+        IOptions<BusinessRulesSettings> businessRules)
     {
         _reportQueryRepository = reportQueryRepository;
+        _businessRules = businessRules.Value;
     }
 
     public async Task<ApiResponse<List<CustomerTopSpenderReportResponse>>> GetTopSpendersAsync(
@@ -40,7 +44,7 @@ public class CustomerReportService : ICustomerReportService
         CancellationToken cancellationToken = default)
     {
         var regulars = await _reportQueryRepository.GetRegularCustomersAsync(
-            RegularCustomerMinimumPurchases, cancellationToken);
+            _businessRules.RegularCustomerMinimumPurchases, cancellationToken);
 
         var response = regulars.Select(x => new RegularCustomerReportResponse
         {
@@ -66,12 +70,12 @@ public class CustomerReportService : ICustomerReportService
         var now = DateTime.UtcNow;
         var response = overdueSales.Select(sale => new PendingCreditCustomerReportResponse
         {
-            SaleId = sale.Id,
+            SaleId = sale.SaleId,
             CustomerId = sale.CustomerId,
-            FullName = sale.Customer?.FullName ?? string.Empty,
-            Email = sale.Customer?.Email ?? string.Empty,
-            Phone = sale.Customer?.Phone,
-            Address = sale.Customer?.Address,
+            FullName = sale.CustomerName,
+            Email = sale.CustomerEmail,
+            Phone = sale.Phone,
+            Address = sale.Address,
             SaleDate = sale.SaleDate,
             CreditAmount = sale.TotalAmount,
             DaysOverdue = Math.Max(0, (int)(now - sale.SaleDate).TotalDays)
