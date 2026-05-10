@@ -48,6 +48,7 @@ public class AppointmentsController : BaseController
     /// <returns>List of appointments</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetAll(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
@@ -65,6 +66,7 @@ public class AppointmentsController : BaseController
     /// <returns>Appointment details</returns>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<AppointmentResponse>>> GetById(
         Guid id,

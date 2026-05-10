@@ -29,11 +29,6 @@ public class CustomersController : BaseController
     /// <param name="request">Customer details including FullName, Email, Phone, Address, CreateLoginAccount flag, and optional Vehicle details. When createLoginAccount is true, creates a linked user account. When vehicle is provided, creates a vehicle linked to the customer.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created customer details including ApplicationUserId when login account is created</returns>
-    /// <response code="200">Customer created successfully</response>
-    /// <response code="400">Validation error or creation failed</response>
-    /// <response code="401">Unauthorized - Invalid or missing authentication token</response>
-    /// <response code="403">Forbidden - Insufficient permissions</response>
-    /// <response code="409">Email already exists (as user account or customer)</response>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<CustomerResponseDto>), StatusCodes.Status400BadRequest)]

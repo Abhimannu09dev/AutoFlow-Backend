@@ -32,8 +32,8 @@ public class SalesController : BaseController
     [Authorize(Roles = "Staff")]
     [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<SaleResponse>), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ApiResponse<SaleResponse>>> Create(
         [FromBody] CreateSaleRequest request,
         CancellationToken cancellationToken)
@@ -87,6 +87,8 @@ public class SalesController : BaseController
     /// <returns>List of customer's purchases</returns>
     [HttpGet("customer/{customerId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult> GetByCustomerId(Guid customerId, CancellationToken cancellationToken)
     {
         var result = await _saleService.GetByCustomerIdAsync(customerId, cancellationToken);
