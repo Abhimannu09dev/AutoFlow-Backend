@@ -123,7 +123,7 @@ public class CustomerService : ICustomerService
     }
 
     public async Task<ApiResponse<PagedResponse<CustomerResponseDto>>> GetAllAsync(
-        PagedRequest request,
+        CustomerPagedRequest request,
         CancellationToken cancellationToken = default)
     {
         var paged = await _customerRepository.GetPagedAsync(request, cancellationToken);

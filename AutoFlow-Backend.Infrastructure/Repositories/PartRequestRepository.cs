@@ -14,8 +14,14 @@ public class PartRequestRepository : RepositoryBase<PartRequest>, IPartRequestRe
     public Task<PagedResponse<PartRequest>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = Context.Set<PartRequest>()
-            .AsNoTracking()
-            .OrderByDescending(pr => pr.CreatedAt);
+            .AsNoTracking();
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(pr => pr.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(pr => pr.CreatedAt),
+            _                                => query.OrderByDescending(pr => pr.CreatedAt)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }
@@ -24,8 +30,14 @@ public class PartRequestRepository : RepositoryBase<PartRequest>, IPartRequestRe
     {
         var query = Context.Set<PartRequest>()
             .AsNoTracking()
-            .Where(pr => pr.CustomerId == customerId)
-            .OrderByDescending(pr => pr.CreatedAt);
+            .Where(pr => pr.CustomerId == customerId);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(pr => pr.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(pr => pr.CreatedAt),
+            _                                => query.OrderByDescending(pr => pr.CreatedAt)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

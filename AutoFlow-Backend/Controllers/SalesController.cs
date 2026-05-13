@@ -53,7 +53,7 @@ public class SalesController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all sales transactions
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=saleDate, sortDir=desc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of sales</returns>
     [HttpGet]

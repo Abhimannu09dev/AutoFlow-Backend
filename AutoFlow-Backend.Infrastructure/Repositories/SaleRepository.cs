@@ -12,13 +12,19 @@ public class SaleRepository(AppDbContext context)
 {
     public Task<PagedResponse<Sale>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = Context.Sales
+        IQueryable<Sale> query = Context.Sales
             .AsNoTracking()
             .Include(s => s.Customer)
             .Include(s => s.Staff)
             .Include(s => s.SaleItems)
-                .ThenInclude(si => si.Part)
-            .OrderByDescending(s => s.SaleDate);
+                .ThenInclude(si => si.Part);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(s => s.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(s => s.CreatedAt),
+            _                                => query.OrderByDescending(s => s.SaleDate)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

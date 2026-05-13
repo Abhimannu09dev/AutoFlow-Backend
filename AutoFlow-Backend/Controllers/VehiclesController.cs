@@ -48,7 +48,7 @@ public class VehiclesController : BaseController
     /// <summary>
     /// Get all vehicles. Staff/Admin see all vehicles; Customers see only their own.
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=vehicleNumber, sortDir=asc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of vehicles</returns>
     [HttpGet]

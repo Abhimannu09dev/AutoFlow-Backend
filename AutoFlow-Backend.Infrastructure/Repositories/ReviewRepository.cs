@@ -14,8 +14,14 @@ public class ReviewRepository : RepositoryBase<Review>, IReviewRepository
     public Task<PagedResponse<Review>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = Context.Set<Review>()
-            .AsNoTracking()
-            .OrderByDescending(r => r.CreatedAt);
+            .AsNoTracking();
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(r => r.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(r => r.CreatedAt),
+            _                                => query.OrderByDescending(r => r.CreatedAt)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }
