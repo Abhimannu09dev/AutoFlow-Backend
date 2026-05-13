@@ -6,6 +6,8 @@ public class AppointmentResponse
 {
     public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
+    public Guid? VehicleId { get; set; }
+    public string? VehicleNumber { get; set; }
     public DateOnly Date { get; set; }
     public TimeOnly Time { get; set; }
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Pending;

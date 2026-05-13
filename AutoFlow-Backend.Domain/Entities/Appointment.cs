@@ -6,9 +6,12 @@ public class Appointment
 {
     public Guid Id { get; set; }
     public Guid CustomerId { get; set; }
+    public Guid? VehicleId { get; set; }
     public DateOnly Date { get; set; }
     public TimeOnly Time { get; set; }
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Pending;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    public Vehicle? Vehicle { get; set; }
 }

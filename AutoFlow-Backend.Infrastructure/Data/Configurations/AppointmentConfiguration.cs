@@ -17,5 +17,9 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
               .WithMany()
               .HasForeignKey(a => a.CustomerId)
               .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(a => a.Vehicle)
+              .WithMany()
+              .HasForeignKey(a => a.VehicleId)
+              .OnDelete(DeleteBehavior.SetNull);
     }
 }

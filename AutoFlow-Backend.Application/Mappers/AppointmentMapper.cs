@@ -11,6 +11,8 @@ public static class AppointmentMapper
         {
             Id = appointment.Id,
             CustomerId = appointment.CustomerId,
+            VehicleId = appointment.VehicleId,
+            VehicleNumber = appointment.Vehicle?.VehicleNumber,
             Date = appointment.Date,
             Time = appointment.Time,
             Status = appointment.Status,
