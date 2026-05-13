@@ -13,4 +13,6 @@ public class CreateAppointmentRequest
     public TimeOnly Time { get; set; }
 
     public string? Status { get; set; }
+
+    public Guid? VehicleId { get; set; }
 }

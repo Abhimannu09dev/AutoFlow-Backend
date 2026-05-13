@@ -12,13 +12,16 @@ public class AppointmentService : IAppointmentService
 {
     private readonly IAppointmentRepository _appointmentRepository;
     private readonly ICustomerRepository _customerRepository;
+    private readonly IVehicleService _vehicleService;
 
     public AppointmentService(
         IAppointmentRepository appointmentRepository,
-        ICustomerRepository customerRepository)
+        ICustomerRepository customerRepository,
+        IVehicleService vehicleService)
     {
         _appointmentRepository = appointmentRepository;
         _customerRepository = customerRepository;
+        _vehicleService = vehicleService;
     }
 
     public async Task<ApiResponse<AppointmentResponse>> CreateAsync(
@@ -28,6 +31,7 @@ public class AppointmentService : IAppointmentService
         CancellationToken cancellationToken = default)
     {
         Guid customerId;
+        Customer? customer = null;
 
         if (isStaffOrAdmin && request.CustomerId.HasValue)
         {
@@ -35,7 +39,7 @@ public class AppointmentService : IAppointmentService
         }
         else if (requestingUserId.HasValue)
         {
-            var customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
+            customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
             if (customer is null)
                 return ApiResponseFactory.Fail<AppointmentResponse>("Customer profile not found. Please contact support.");
             customerId = customer.Id;
@@ -43,6 +47,26 @@ public class AppointmentService : IAppointmentService
         else
         {
             return ApiResponseFactory.Fail<AppointmentResponse>("Unable to determine customer.");
+        }
+
+        if (request.VehicleId.HasValue)
+        {
+            var vehicleResult = await _vehicleService.GetByIdAsync(
+                request.VehicleId.Value,
+                requestingUserId: null,
+                isStaffOrAdmin: true,
+                cancellationToken);
+
+            if (!vehicleResult.IsSuccess || vehicleResult.Data is null)
+                return ApiResponseFactory.Fail<AppointmentResponse>("Vehicle not found.");
+
+            customer ??= await _customerRepository.GetByIdAsync(customerId, cancellationToken);
+
+            if (customer is null || !customer.ApplicationUserId.HasValue)
+                return ApiResponseFactory.Fail<AppointmentResponse>("Customer profile incomplete. Cannot associate vehicle.");
+
+            if (vehicleResult.Data.UserId != customer.ApplicationUserId.Value)
+                return ApiResponseFactory.Fail<AppointmentResponse>("Vehicle does not belong to this customer.");
         }
 
         var status = Enum.TryParse<AppointmentStatus>(request.Status, ignoreCase: true, out var parsed)
@@ -53,6 +77,7 @@ public class AppointmentService : IAppointmentService
         {
             Id = Guid.NewGuid(),
             CustomerId = customerId,
+            VehicleId = request.VehicleId,
             Date = request.Date,
             Time = request.Time,
             Status = status,

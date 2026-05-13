@@ -12,6 +12,7 @@ public class AppointmentRepository : RepositoryBase<Appointment>, IAppointmentRe
     public async Task<List<Appointment>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await Context.Set<Appointment>()
             .AsNoTracking()
+            .Include(a => a.Vehicle)
             .OrderBy(a => a.Date)
             .ThenBy(a => a.Time)
             .ToListAsync(cancellationToken);
@@ -19,6 +20,7 @@ public class AppointmentRepository : RepositoryBase<Appointment>, IAppointmentRe
     public async Task<Appointment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await Context.Set<Appointment>()
             .AsNoTracking()
+            .Include(a => a.Vehicle)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
     public async Task<List<Appointment>> GetByCustomerIdAsync(
@@ -26,6 +28,7 @@ public class AppointmentRepository : RepositoryBase<Appointment>, IAppointmentRe
         CancellationToken cancellationToken = default) =>
         await Context.Set<Appointment>()
             .AsNoTracking()
+            .Include(a => a.Vehicle)
             .Where(a => a.CustomerId == customerId)
             .OrderByDescending(a => a.Date)
             .ThenByDescending(a => a.Time)
