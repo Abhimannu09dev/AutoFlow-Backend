@@ -68,30 +68,31 @@ public class PartRequestService : IPartRequestService
         return ApiResponseFactory.Ok("Part request created successfully.", partRequest.ToResponse());
     }
 
-    public async Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
+    public async Task<ApiResponse<PagedResponse<PartRequestResponse>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        List<PartRequest> results;
+        PagedResponse<PartRequest> paged;
 
         if (isStaffOrAdmin)
         {
-            results = await _partRequestRepository.GetAllAsync(cancellationToken);
+            paged = await _partRequestRepository.GetPagedAsync(request, cancellationToken);
         }
         else if (requestingUserId.HasValue)
         {
             var customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
             if (customer is null)
-                return ApiResponseFactory.Fail<List<PartRequestResponse>>("Customer profile not found.");
+                return ApiResponseFactory.Fail<PagedResponse<PartRequestResponse>>("Customer profile not found.");
 
-            results = await _partRequestRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+            paged = await _partRequestRepository.GetPagedByCustomerIdAsync(customer.Id, request, cancellationToken);
         }
         else
         {
-            return ApiResponseFactory.Fail<List<PartRequestResponse>>("Unable to determine user.");
+            return ApiResponseFactory.Fail<PagedResponse<PartRequestResponse>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Part requests retrieved successfully.", results.Select(p => p.ToResponse()).ToList());
+        return ApiResponseFactory.Ok("Part requests retrieved successfully.", paged.Map(p => p.ToResponse()));
     }
 }

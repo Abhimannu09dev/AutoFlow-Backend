@@ -112,10 +112,10 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
         return ApiResponseFactory.Ok("Purchase invoice created successfully.", PurchaseInvoiceMapper.ToResponse(invoice!, vendor.VendorName));
     }
 
-    public async Task<ApiResponse<List<PurchaseInvoiceResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<PurchaseInvoiceResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var invoices = await _purchaseInvoiceRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", invoices.Select(PurchaseInvoiceMapper.ToResponse).ToList());
+        var paged = await _purchaseInvoiceRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Purchase invoices retrieved successfully.", paged.Map(PurchaseInvoiceMapper.ToResponse));
     }
 
     public async Task<ApiResponse<PurchaseInvoiceResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

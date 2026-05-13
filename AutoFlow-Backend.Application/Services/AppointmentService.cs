@@ -90,31 +90,32 @@ public class AppointmentService : IAppointmentService
         return ApiResponseFactory.Ok("Appointment created successfully.", AppointmentMapper.ToResponse(appointment));
     }
 
-    public async Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
+    public async Task<ApiResponse<PagedResponse<AppointmentResponse>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        List<Appointment> appointments;
+        PagedResponse<Appointment> paged;
 
         if (isStaffOrAdmin)
         {
-            appointments = await _appointmentRepository.GetAllAsync(cancellationToken);
+            paged = await _appointmentRepository.GetPagedAsync(request, cancellationToken);
         }
         else if (requestingUserId.HasValue)
         {
             var customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
             if (customer is null)
-                return ApiResponseFactory.Fail<List<AppointmentResponse>>("Customer profile not found.");
+                return ApiResponseFactory.Fail<PagedResponse<AppointmentResponse>>("Customer profile not found.");
 
-            appointments = await _appointmentRepository.GetByCustomerIdAsync(customer.Id, cancellationToken);
+            paged = await _appointmentRepository.GetPagedByCustomerIdAsync(customer.Id, request, cancellationToken);
         }
         else
         {
-            return ApiResponseFactory.Fail<List<AppointmentResponse>>("Unable to determine user.");
+            return ApiResponseFactory.Fail<PagedResponse<AppointmentResponse>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Appointments retrieved successfully.", appointments.Select(AppointmentMapper.ToResponse).ToList());
+        return ApiResponseFactory.Ok("Appointments retrieved successfully.", paged.Map(AppointmentMapper.ToResponse));
     }
 
     public async Task<ApiResponse<AppointmentResponse>> GetByIdAsync(

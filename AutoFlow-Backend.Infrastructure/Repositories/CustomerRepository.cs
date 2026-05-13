@@ -1,5 +1,7 @@
-﻿using AutoFlow_Backend.Application.Interfaces.Repositories;
+﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Infrastructure.Common;
 using AutoFlow_Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,15 @@ namespace AutoFlow_Backend.Infrastructure.Repositories;
 public class CustomerRepository : RepositoryBase<Customer>, ICustomerRepository
 {
     public CustomerRepository(AppDbContext context) : base(context) { }
+
+    public Task<PagedResponse<Customer>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
+    {
+        var query = Context.Set<Customer>()
+            .AsNoTracking()
+            .OrderBy(c => c.FullName);
+
+        return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
+    }
 
     public async Task<bool> EmailExistsAsync(
         string normalizedEmail,

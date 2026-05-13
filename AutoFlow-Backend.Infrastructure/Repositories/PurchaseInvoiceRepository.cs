@@ -1,5 +1,7 @@
+using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Infrastructure.Common;
 using AutoFlow_Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,18 @@ namespace AutoFlow_Backend.Infrastructure.Repositories;
 public class PurchaseInvoiceRepository(AppDbContext context)
     : RepositoryBase<PurchaseInvoice>(context), IPurchaseInvoiceRepository
 {
+    public Task<PagedResponse<PurchaseInvoice>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
+    {
+        var query = Context.PurchaseInvoices
+            .AsNoTracking()
+            .Include(p => p.Vendor)
+            .Include(p => p.Items)
+                .ThenInclude(i => i.Part)
+            .OrderByDescending(p => p.InvoiceDate);
+
+        return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
+    }
+
     public Task<List<PurchaseInvoice>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return Context.PurchaseInvoices

@@ -43,14 +43,17 @@ public class PartsController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all parts in the inventory
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all parts</returns>
+    /// <returns>Paged list of parts</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<PartResponse>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<PartResponse>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<PartResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<PartResponse>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<PartResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await _partService.GetAllAsync(cancellationToken);
+        var response = await _partService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 

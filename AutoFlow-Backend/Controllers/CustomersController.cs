@@ -49,14 +49,17 @@ public class CustomersController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all customers registered in the system
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all customers</returns>
+    /// <returns>Paged list of customers</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<CustomerResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<CustomerResponseDto>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<CustomerResponseDto>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<CustomerResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<CustomerResponseDto>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<CustomerResponseDto>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await _customerService.GetAllAsync(cancellationToken);
+        var response = await _customerService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 

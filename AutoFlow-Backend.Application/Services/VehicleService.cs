@@ -76,27 +76,28 @@ public class VehicleService : IVehicleService
         return ApiResponseFactory.Ok("Vehicle created successfully.", vehicle.ToResponse());
     }
 
-    public async Task<ApiResponse<List<VehicleResponseDto>>> GetAllAsync(
+    public async Task<ApiResponse<PagedResponse<VehicleResponseDto>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default)
     {
-        List<Vehicle> vehicles;
+        PagedResponse<Vehicle> paged;
 
         if (isStaffOrAdmin)
         {
-            vehicles = await _vehicleRepository.GetAllAsync(cancellationToken);
+            paged = await _vehicleRepository.GetPagedAsync(request, cancellationToken);
         }
         else if (requestingUserId.HasValue)
         {
-            vehicles = await _vehicleRepository.GetByUserIdAsync(requestingUserId.Value, cancellationToken);
+            paged = await _vehicleRepository.GetPagedByUserIdAsync(requestingUserId.Value, request, cancellationToken);
         }
         else
         {
-            return ApiResponseFactory.Fail<List<VehicleResponseDto>>("Unable to determine user.");
+            return ApiResponseFactory.Fail<PagedResponse<VehicleResponseDto>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", vehicles.Select(v => v.ToResponse()).ToList());
+        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", paged.Map(v => v.ToResponse()));
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> GetByIdAsync(

@@ -59,10 +59,10 @@ public class VendorService : IVendorService
         return ApiResponseFactory.Ok("Vendor created successfully.", vendor.ToResponse());
     }
 
-    public async Task<ApiResponse<List<VendorResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<VendorResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var vendors = await _vendorRepository.GetActiveAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Vendors retrieved successfully.", vendors.Select(v => v.ToResponse()).ToList());
+        var paged = await _vendorRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Vendors retrieved successfully.", paged.Map(v => v.ToResponse()));
     }
 
     public async Task<ApiResponse<VendorResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

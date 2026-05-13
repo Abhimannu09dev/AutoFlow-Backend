@@ -77,10 +77,10 @@ public class PartService : IPartService
         return ApiResponseFactory.Ok("Part created successfully.", part.ToResponse(vendorName));
     }
 
-    public async Task<ApiResponse<List<PartResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<PartResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var parts = await _partRepository.GetActiveAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Parts retrieved successfully.", parts.Select(p => p.ToResponse()).ToList());
+        var paged = await _partRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Parts retrieved successfully.", paged.Map(p => p.ToResponse()));
     }
 
     public async Task<ApiResponse<PartResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

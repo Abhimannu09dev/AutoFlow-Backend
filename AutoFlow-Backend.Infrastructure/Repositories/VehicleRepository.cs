@@ -1,5 +1,7 @@
-﻿using AutoFlow_Backend.Application.Interfaces.Repositories;
+﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Infrastructure.Common;
 using AutoFlow_Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,25 @@ namespace AutoFlow_Backend.Infrastructure.Repositories;
 public class VehicleRepository : RepositoryBase<Vehicle>, IVehicleRepository
 {
     public VehicleRepository(AppDbContext context) : base(context) { }
+
+    public Task<PagedResponse<Vehicle>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
+    {
+        var query = Context.Set<Vehicle>()
+            .AsNoTracking()
+            .OrderBy(v => v.VehicleNumber);
+
+        return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
+    }
+
+    public Task<PagedResponse<Vehicle>> GetPagedByUserIdAsync(Guid userId, PagedRequest request, CancellationToken cancellationToken = default)
+    {
+        var query = Context.Set<Vehicle>()
+            .AsNoTracking()
+            .Where(v => v.UserId == userId)
+            .OrderBy(v => v.VehicleNumber);
+
+        return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
+    }
 
     public async Task<List<Vehicle>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await Context.Set<Vehicle>()

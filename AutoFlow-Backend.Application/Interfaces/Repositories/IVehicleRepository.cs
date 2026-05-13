@@ -1,9 +1,12 @@
-﻿using AutoFlow_Backend.Domain.Entities;
+﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Interfaces.Repositories;
 
 public interface IVehicleRepository : IRepositoryBase<Vehicle>
 {
+    Task<PagedResponse<Vehicle>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default);
+    Task<PagedResponse<Vehicle>> GetPagedByUserIdAsync(Guid userId, PagedRequest request, CancellationToken cancellationToken = default);
     Task<List<Vehicle>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<List<Vehicle>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<Guid>> GetUserIdsByVehicleQueryAsync(string normalizedLowerQuery, CancellationToken cancellationToken = default);

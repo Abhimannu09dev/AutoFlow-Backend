@@ -105,11 +105,12 @@ public class StaffService : IStaffService
         return ApiResponseFactory.Ok("Staff created successfully.", staffProfile.ToResponse());
     }
 
-    public async Task<ApiResponse<List<StaffResponse>>> GetAllAsync(
+    public async Task<ApiResponse<PagedResponse<StaffResponse>>> GetAllAsync(
+        PagedRequest request,
         CancellationToken cancellationToken = default)
     {
-        var staffProfiles = await _staffRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Staff retrieved successfully.", staffProfiles.Select(s => s.ToResponse()).ToList());
+        var paged = await _staffRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Staff retrieved successfully.", paged.Map(s => s.ToResponse()));
     }
 
     public async Task<ApiResponse<StaffResponse>> GetByIdAsync(

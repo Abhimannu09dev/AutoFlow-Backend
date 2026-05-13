@@ -11,5 +11,5 @@ public interface IReviewService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<PagedResponse<ReviewResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default);
 }
