@@ -11,7 +11,8 @@ public interface IPartRequestService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<List<PartRequestResponse>>> GetAllAsync(
+    Task<ApiResponse<PagedResponse<PartRequestResponse>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);

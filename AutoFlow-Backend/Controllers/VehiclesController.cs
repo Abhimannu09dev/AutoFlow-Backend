@@ -45,21 +45,23 @@ public class VehiclesController : BaseController
         return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
     }
 
-/// <summary>
+    /// <summary>
     /// Get all vehicles. Staff/Admin see all vehicles; Customers see only their own.
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of vehicles</returns>
+    /// <returns>Paged list of vehicles</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<VehicleResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<VehicleResponseDto>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<VehicleResponseDto>>>> GetAll(
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<VehicleResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<VehicleResponseDto>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<VehicleResponseDto>>>> GetAll(
+        [FromQuery] PagedRequest request,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         var isStaffOrAdmin = IsStaffOrAdmin();
 
-        var response = await _vehicleService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
+        var response = await _vehicleService.GetAllAsync(request, userId, isStaffOrAdmin, cancellationToken);
         return Ok(response);
     }
 

@@ -11,7 +11,8 @@ public interface IVehicleService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<List<VehicleResponseDto>>> GetAllAsync(
+    Task<ApiResponse<PagedResponse<VehicleResponseDto>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);

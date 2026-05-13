@@ -130,10 +130,10 @@ public class SaleService : ISaleService
         return ApiResponseFactory.Ok("Sale created successfully.", SaleMapper.ToResponse(sale!));
     }
 
-    public async Task<ApiResponse<List<SaleResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<SaleResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var sales = await _saleRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(SaleMapper.ToResponse).ToList());
+        var paged = await _saleRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Sales retrieved successfully.", paged.Map(SaleMapper.ToResponse));
     }
 
     public async Task<ApiResponse<SaleResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

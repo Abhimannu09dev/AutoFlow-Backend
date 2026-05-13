@@ -39,16 +39,19 @@ public class StaffController : BaseController
     }
 
     /// <summary>
-    /// [Admin] Get all active staff members
+    /// [Admin] Get all staff members
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all active staff members</returns>
+    /// <returns>Paged list of staff members</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<StaffResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<StaffResponse>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<StaffResponse>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<StaffResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<StaffResponse>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<StaffResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await _staffService.GetAllAsync(cancellationToken);
+        var response = await _staffService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 

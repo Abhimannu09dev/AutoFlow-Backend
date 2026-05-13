@@ -122,11 +122,12 @@ public class CustomerService : ICustomerService
         return ApiResponseFactory.Ok(message, CustomerMapper.ToResponse(customer));
     }
 
-    public async Task<ApiResponse<List<CustomerResponseDto>>> GetAllAsync(
+    public async Task<ApiResponse<PagedResponse<CustomerResponseDto>>> GetAllAsync(
+        PagedRequest request,
         CancellationToken cancellationToken = default)
     {
-        var customers = await _customerRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Customers retrieved successfully.", customers.Select(CustomerMapper.ToResponse).ToList());
+        var paged = await _customerRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Customers retrieved successfully.", paged.Map(CustomerMapper.ToResponse));
     }
 
     public async Task<ApiResponse<CustomerResponseDto>> GetByIdAsync(

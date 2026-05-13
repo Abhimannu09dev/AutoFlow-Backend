@@ -53,14 +53,17 @@ public class SalesController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all sales transactions
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all sales</returns>
+    /// <returns>Paged list of sales</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<SaleResponse>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<SaleResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<SaleResponse>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<SaleResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await _saleService.GetAllAsync(cancellationToken);
+        var result = await _saleService.GetAllAsync(request, cancellationToken);
         return Ok(result);
     }
 

@@ -1,5 +1,7 @@
+using AutoFlow_Backend.Application.Common;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
+using AutoFlow_Backend.Infrastructure.Common;
 using AutoFlow_Backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,17 @@ namespace AutoFlow_Backend.Infrastructure.Repositories;
 public class PartRepository(AppDbContext context)
     : RepositoryBase<Part>(context), IPartRepository
 {
+    public Task<PagedResponse<Part>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
+    {
+        var query = Context.Parts
+            .AsNoTracking()
+            .Include(p => p.Vendor)
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.PartName);
+
+        return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
+    }
+
     public Task<bool> ExistsActiveByPartNumberAsync(
         string normalizedPartNumber,
         Guid? excludeId = null,

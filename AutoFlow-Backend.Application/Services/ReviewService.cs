@@ -62,9 +62,9 @@ public class ReviewService : IReviewService
         return ApiResponseFactory.Ok("Review created successfully.", review.ToResponse());
     }
 
-    public async Task<ApiResponse<List<ReviewResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<ReviewResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var results = await _reviewRepository.GetAllAsync(cancellationToken);
-        return ApiResponseFactory.Ok("Reviews retrieved successfully.", results.Select(r => r.ToResponse()).ToList());
+        var paged = await _reviewRepository.GetPagedAsync(request, cancellationToken);
+        return ApiResponseFactory.Ok("Reviews retrieved successfully.", paged.Map(r => r.ToResponse()));
     }
 }

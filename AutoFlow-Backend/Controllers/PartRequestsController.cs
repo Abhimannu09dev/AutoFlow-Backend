@@ -43,16 +43,19 @@ public class PartRequestsController : BaseController
     /// <summary>
     /// [Customer, Staff, Admin] Get part requests. Customers see only their own; Staff/Admin see all.
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of part requests</returns>
+    /// <returns>Paged list of part requests</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<PartRequestResponse>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<PartRequestResponse>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<PartRequestResponse>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<PartRequestResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         var isStaffOrAdmin = IsStaffOrAdmin();
 
-        var response = await _partRequestService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
+        var response = await _partRequestService.GetAllAsync(request, userId, isStaffOrAdmin, cancellationToken);
         return response.ToActionResult();
     }
 }

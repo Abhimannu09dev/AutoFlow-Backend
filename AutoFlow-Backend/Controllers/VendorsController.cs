@@ -42,15 +42,17 @@ public class VendorsController : BaseController
     /// <summary>
     /// [Admin] Get all vendors/suppliers
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all vendors</returns>
+    /// <returns>Paged list of vendors</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<VendorResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<VendorResponse>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<VendorResponse>>>> GetAll(
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<VendorResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<VendorResponse>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<VendorResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _vendorService.GetAllAsync(cancellationToken);
+        var response = await _vendorService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 

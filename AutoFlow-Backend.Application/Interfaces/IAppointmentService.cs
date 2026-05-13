@@ -11,7 +11,8 @@ public interface IAppointmentService
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
 
-    Task<ApiResponse<List<AppointmentResponse>>> GetAllAsync(
+    Task<ApiResponse<PagedResponse<AppointmentResponse>>> GetAllAsync(
+        PagedRequest request,
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);

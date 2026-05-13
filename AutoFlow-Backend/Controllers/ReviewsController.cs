@@ -43,13 +43,16 @@ public class ReviewsController : BaseController
     /// <summary>
     /// [Customer, Staff, Admin] Get all customer reviews. Everyone can see all reviews.
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all customer reviews</returns>
+    /// <returns>Paged list of customer reviews</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<ReviewResponse>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<ReviewResponse>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<ReviewResponse>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<ReviewResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await _reviewService.GetAllAsync(cancellationToken);
+        var response = await _reviewService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 }

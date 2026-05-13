@@ -1,9 +1,11 @@
-﻿using AutoFlow_Backend.Domain.Entities;
+﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Domain.Entities;
 
 namespace AutoFlow_Backend.Application.Interfaces.Repositories;
 
 public interface ICustomerRepository : IRepositoryBase<Customer>
 {
+    Task<PagedResponse<Customer>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default);
     Task<bool> EmailExistsAsync(string normalizedEmail, Guid? excludeId = null, CancellationToken cancellationToken = default);
     Task<List<Customer>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);

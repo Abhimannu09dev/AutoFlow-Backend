@@ -45,13 +45,16 @@ public class PurchaseInvoicesController : BaseController
     /// <summary>
     /// [Admin] Get all purchase invoices
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all purchase invoices</returns>
+    /// <returns>Paged list of purchase invoices</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<PurchaseInvoiceResponse>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<PurchaseInvoiceResponse>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<PurchaseInvoiceResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await _purchaseInvoiceService.GetAllAsync(cancellationToken);
+        var result = await _purchaseInvoiceService.GetAllAsync(request, cancellationToken);
         return Ok(result);
     }
 

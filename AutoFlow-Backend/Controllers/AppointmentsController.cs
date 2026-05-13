@@ -44,17 +44,20 @@ public class AppointmentsController : BaseController
     /// <summary>
     /// [Customer, Staff, Admin] Get appointments. Customers see only their own; Staff/Admin see all.
     /// </summary>
+    /// <param name="request">Pagination parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of appointments</returns>
+    /// <returns>Paged list of appointments</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<List<AppointmentResponse>>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<List<AppointmentResponse>>>> GetAll(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<AppointmentResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PagedResponse<AppointmentResponse>>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<PagedResponse<AppointmentResponse>>>> GetAll(
+        [FromQuery] PagedRequest request,
+        CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         var isStaffOrAdmin = IsStaffOrAdmin();
 
-        var response = await _appointmentService.GetAllAsync(userId, isStaffOrAdmin, cancellationToken);
+        var response = await _appointmentService.GetAllAsync(request, userId, isStaffOrAdmin, cancellationToken);
         return response.ToActionResult();
     }
 
