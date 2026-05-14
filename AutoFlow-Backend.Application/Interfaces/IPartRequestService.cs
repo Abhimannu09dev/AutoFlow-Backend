@@ -16,4 +16,9 @@ public interface IPartRequestService
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PartRequestResponse>> UpdateStatusAsync(
+        Guid id,
+        UpdatePartRequestStatusRequest request,
+        CancellationToken cancellationToken = default);
 }

@@ -13,6 +13,7 @@ public static class ApiResponseExtensions
             {
                 ErrorType.NotFound => new NotFoundObjectResult(response),
                 ErrorType.Conflict => new ConflictObjectResult(response),
+                ErrorType.Unauthorized => new UnauthorizedObjectResult(response),
                 _ => new BadRequestObjectResult(response)
             };
     }

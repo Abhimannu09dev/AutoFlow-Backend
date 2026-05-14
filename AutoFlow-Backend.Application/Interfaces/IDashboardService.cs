@@ -6,4 +6,8 @@ namespace AutoFlow_Backend.Application.Interfaces;
 public interface IDashboardService
 {
     Task<ApiResponse<DashboardResponse>> GetDashboardAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<ActivityStreamItemResponse>>> GetActivityStreamAsync(int limit, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<RevenueTrendPointResponse>>> GetRevenueTrendAsync(string range, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<FastMovingInventoryResponse>>> GetFastMovingInventoryAsync(int limit, CancellationToken cancellationToken = default);
+    Task<ApiResponse<List<PriorityAlertResponse>>> GetPriorityAlertsAsync(int limit, CancellationToken cancellationToken = default);
 }
