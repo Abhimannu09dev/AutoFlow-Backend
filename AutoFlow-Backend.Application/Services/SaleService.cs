@@ -5,7 +5,6 @@ using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,21 +18,21 @@ public class SaleService : ISaleService
     private readonly IPartRepository _partRepository;
     private readonly IEmailService _emailService;
     private readonly ILogger<SaleService> _logger;
-    private readonly DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
 
     public SaleService(
         ISaleRepository saleRepository,
         IPartRepository partRepository,
         IEmailService emailService,
         ILogger<SaleService> logger,
-        DbContext context,
+        IUnitOfWork unitOfWork,
         IOptions<BusinessRulesSettings> businessRules)
     {
         _saleRepository = saleRepository;
         _partRepository = partRepository;
         _emailService = emailService;
         _logger = logger;
-        _context = context;
+        _unitOfWork = unitOfWork;
         _businessRules = businessRules.Value;
     }
 
@@ -87,7 +86,7 @@ public class SaleService : ISaleService
 
         Sale? sale = null;
 
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             foreach (var (item, part) in resolvedItems)

@@ -56,6 +56,14 @@ public class EmailService : IEmailService
         }
     }
 
+    public async Task SendAdminAlertAsync(
+        string subject,
+        string body,
+        CancellationToken cancellationToken = default)
+    {
+        await SendAsync(_emailSettings.AdminEmail, subject, body, cancellationToken);
+    }
+
     public async Task SendInvoiceAsync(SaleInvoiceDto invoice, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(invoice.CustomerEmail))

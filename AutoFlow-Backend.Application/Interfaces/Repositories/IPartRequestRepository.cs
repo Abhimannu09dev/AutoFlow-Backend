@@ -9,4 +9,5 @@ public interface IPartRequestRepository : IRepositoryBase<PartRequest>
     Task<PagedResponse<PartRequest>> GetPagedByCustomerIdAsync(Guid customerId, PagedRequest request, CancellationToken cancellationToken = default);
     Task<List<PartRequest>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<List<PartRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
+    Task<PartRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -95,4 +95,50 @@ public class PartRequestService : IPartRequestService
 
         return ApiResponseFactory.Ok("Part requests retrieved successfully.", paged.Map(p => p.ToResponse()));
     }
+
+    public async Task<ApiResponse<PartRequestResponse>> UpdateStatusAsync(
+        Guid id,
+        UpdatePartRequestStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var partRequest = await _partRequestRepository.GetByIdAsync(id, cancellationToken);
+        if (partRequest is null)
+            return ApiResponseFactory.FailNotFound<PartRequestResponse>("Part request not found.");
+
+        if (!TryMapStatus(request.Status, out var mappedStatus))
+            return ApiResponseFactory.Fail<PartRequestResponse>(
+                "Status must be one of: Pending, Done, Rejected.");
+
+        partRequest.Status = mappedStatus;
+        partRequest.UpdatedAt = DateTime.UtcNow;
+
+        _partRequestRepository.Update(partRequest);
+        await _partRequestRepository.SaveChangesAsync(cancellationToken);
+
+        return ApiResponseFactory.Ok("Part request status updated successfully.", partRequest.ToResponse());
+    }
+
+    private static bool TryMapStatus(string? status, out PartRequestStatus mappedStatus)
+    {
+        mappedStatus = PartRequestStatus.Pending;
+
+        if (string.IsNullOrWhiteSpace(status))
+            return false;
+
+        switch (status.Trim().ToLowerInvariant())
+        {
+            case "pending":
+                mappedStatus = PartRequestStatus.Pending;
+                return true;
+            case "done":
+            case "fulfilled":
+                mappedStatus = PartRequestStatus.Fulfilled;
+                return true;
+            case "rejected":
+                mappedStatus = PartRequestStatus.Rejected;
+                return true;
+            default:
+                return false;
+        }
+    }
 }

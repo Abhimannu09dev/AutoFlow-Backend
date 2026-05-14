@@ -54,4 +54,8 @@ public class PartRequestRepository : RepositoryBase<PartRequest>, IPartRequestRe
             .Where(pr => pr.CustomerId == customerId)
             .OrderByDescending(pr => pr.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public async Task<PartRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await Context.Set<PartRequest>()
+            .FirstOrDefaultAsync(pr => pr.Id == id, cancellationToken);
 }

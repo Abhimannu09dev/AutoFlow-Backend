@@ -1,4 +1,6 @@
-﻿namespace AutoFlow_Backend.Application.Interfaces;
+﻿using AutoFlow_Backend.Application.Models;
+
+namespace AutoFlow_Backend.Application.Interfaces;
 
 public interface IIdentityService
 {
@@ -38,5 +40,22 @@ public interface IIdentityService
 
     Task DeleteUserAsync(
         string userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IdentityUserProfileReadModel?> GetUserProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task<(bool Succeeded, string? Error)> UpdateUserProfileAsync(
+        Guid userId,
+        string fullName,
+        string? phone,
+        string? address,
+        CancellationToken cancellationToken = default);
+
+    Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
+        Guid userId,
+        string currentPassword,
+        string newPassword,
         CancellationToken cancellationToken = default);
 }
