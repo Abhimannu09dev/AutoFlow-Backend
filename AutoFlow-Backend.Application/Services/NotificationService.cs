@@ -9,18 +9,15 @@ public class NotificationService : INotificationService
     private readonly IEmailService _emailService;
     private readonly IPartRepository _partRepository;
     private readonly IReportQueryRepository _reportQueryRepository;
-    private readonly INotificationSettings _notificationSettings;
 
     public NotificationService(
         IEmailService emailService,
         IPartRepository partRepository,
-        IReportQueryRepository reportQueryRepository,
-        INotificationSettings notificationSettings)
+        IReportQueryRepository reportQueryRepository)
     {
         _emailService = emailService;
         _partRepository = partRepository;
         _reportQueryRepository = reportQueryRepository;
-        _notificationSettings = notificationSettings;
     }
 
     public async Task<ApiResponse<bool>> SendLowStockAlertAsync(CancellationToken cancellationToken = default)
@@ -38,8 +35,7 @@ public class NotificationService : INotificationService
             <ul>{string.Join("", partLines)}</ul>
             <p>Please restock as soon as possible.</p>";
 
-        await _emailService.SendAsync(
-            to: _notificationSettings.AdminEmail,
+        await _emailService.SendAdminAlertAsync(
             subject: "AutoFlow — Low Stock Alert",
             body: body,
             cancellationToken: cancellationToken);

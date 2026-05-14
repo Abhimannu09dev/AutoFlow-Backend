@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IFinancialReportService, FinancialReportService>();
         services.AddScoped<ICustomerReportService, CustomerReportService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IAdminProfileService, AdminProfileService>();
 
         services.AddTransient<IFailurePredictionRule, BrakePadRule>();
         services.AddTransient<IFailurePredictionRule, TimingBeltRule>();

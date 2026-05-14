@@ -5,7 +5,6 @@ using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace AutoFlow_Backend.Application.Services;
 
@@ -14,18 +13,18 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
     private readonly IPurchaseInvoiceRepository _purchaseInvoiceRepository;
     private readonly IPartRepository _partRepository;
     private readonly IVendorRepository _vendorRepository;
-    private readonly DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
 
     public PurchaseInvoiceService(
         IPurchaseInvoiceRepository purchaseInvoiceRepository,
         IPartRepository partRepository,
         IVendorRepository vendorRepository,
-        DbContext context)
+        IUnitOfWork unitOfWork)
     {
         _purchaseInvoiceRepository = purchaseInvoiceRepository;
         _partRepository = partRepository;
         _vendorRepository = vendorRepository;
-        _context = context;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<PurchaseInvoiceResponse>> CreateAsync(
@@ -75,7 +74,7 @@ public class PurchaseInvoiceService : IPurchaseInvoiceService
 
         PurchaseInvoice? invoice = null;
 
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             foreach (var (item, part) in resolvedItems)

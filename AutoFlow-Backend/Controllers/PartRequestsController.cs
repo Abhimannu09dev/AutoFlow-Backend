@@ -58,4 +58,23 @@ public class PartRequestsController : BaseController
         var response = await _partRequestService.GetAllAsync(request, userId, isStaffOrAdmin, cancellationToken);
         return response.ToActionResult();
     }
+
+    /// <summary>
+    /// [Admin, Staff] Update status for a part request.
+    /// Status values supported by this endpoint: Pending, Done, Rejected.
+    /// Done is mapped to Fulfilled in the domain enum.
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "Admin,Staff")]
+    [ProducesResponseType(typeof(ApiResponse<PartRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<PartRequestResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<PartRequestResponse>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<PartRequestResponse>>> UpdateStatus(
+        Guid id,
+        [FromBody] UpdatePartRequestStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _partRequestService.UpdateStatusAsync(id, request, cancellationToken);
+        return response.ToActionResult();
+    }
 }

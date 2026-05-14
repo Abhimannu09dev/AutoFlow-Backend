@@ -1,4 +1,5 @@
 using AutoFlow_Backend.Application.Interfaces;
+using AutoFlow_Backend.Application.Models;
 using AutoFlow_Backend.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 
@@ -129,13 +130,54 @@ public class IdentityService : IIdentityService
             await _userManager.DeleteAsync(user);
     }
 
+    public async Task<IdentityUserProfileReadModel?> GetUserProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return null;
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return new IdentityUserProfileReadModel(
+            UserId: user.Id,
+            Email: user.Email ?? string.Empty,
+            FullName: user.FullName,
+            Phone: user.PhoneNumber,
+            Address: user.Address,
+            Roles: roles.ToList());
+    }
+
+    public async Task<(bool Succeeded, string? Error)> UpdateUserProfileAsync(
+        Guid userId,
+        string fullName,
+        string? phone,
+        string? address,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return (false, "User not found.");
+
+        user.FullName = fullName;
+        user.PhoneNumber = phone;
+        user.Address = address;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        var result = await _userManager.UpdateAsync(user);
+        return result.Succeeded
+            ? (true, null)
+            : (false, string.Join(" ", result.Errors.Select(e => e.Description)));
+    }
+
     public async Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
-        string userId,
+        Guid userId,
         string currentPassword,
         string newPassword,
         CancellationToken cancellationToken = default)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null)
             return (false, "User not found.");
 
