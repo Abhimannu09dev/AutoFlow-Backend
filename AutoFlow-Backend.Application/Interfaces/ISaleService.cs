@@ -9,5 +9,5 @@ public interface ISaleService
     Task<ApiResponse<PagedResponse<SaleResponse>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default);
     Task<ApiResponse<SaleResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<SaleResponse>>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
-    Task<ApiResponse<bool>> SendInvoiceAsync(Guid saleId, CancellationToken cancellationToken = default);
+    Task<ApiResponse<SendInvoiceResponse>> SendInvoiceAsync(Guid saleId, CancellationToken cancellationToken = default);
 }

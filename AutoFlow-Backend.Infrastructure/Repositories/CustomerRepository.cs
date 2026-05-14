@@ -75,6 +75,17 @@ public class CustomerRepository : RepositoryBase<Customer>, ICustomerRepository
             .OrderBy(c => c.FullName)
             .ToListAsync(cancellationToken);
 
+    public async Task<List<Customer>> GetByApplicationUserIdsAsync(
+        IEnumerable<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.ToList();
+        return await Context.Set<Customer>()
+            .AsNoTracking()
+            .Where(c => c.ApplicationUserId.HasValue && ids.Contains(c.ApplicationUserId.Value))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Customer?> GetByApplicationUserIdAsync(
         Guid applicationUserId,
         CancellationToken cancellationToken = default) =>

@@ -137,4 +137,22 @@ public class AppointmentService : IAppointmentService
 
         return ApiResponseFactory.Ok("Appointment retrieved successfully.", AppointmentMapper.ToResponse(appointment));
     }
+
+    public async Task<ApiResponse<AppointmentResponse>> UpdateStatusAsync(
+        Guid id,
+        UpdateAppointmentStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var appointment = await _appointmentRepository.GetByIdAsync(id, cancellationToken);
+        if (appointment is null)
+            return ApiResponseFactory.FailNotFound<AppointmentResponse>("Appointment not found.");
+
+        appointment.Status = request.Status;
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        _appointmentRepository.Update(appointment);
+        await _appointmentRepository.SaveChangesAsync(cancellationToken);
+
+        return ApiResponseFactory.Ok("Appointment status updated successfully.", AppointmentMapper.ToResponse(appointment));
+    }
 }

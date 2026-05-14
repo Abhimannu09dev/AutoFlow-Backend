@@ -48,6 +48,16 @@ public class VehicleResponseDto
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// Owner's customer ID (Customer table PK)
+    /// </summary>
+    public Guid? CustomerId { get; set; }
+
+    /// <summary>
+    /// Owner's full name
+    /// </summary>
+    public string? OwnerName { get; set; }
+
+    /// <summary>
     /// Date and time when the vehicle was registered
     /// </summary>
     public DateTime CreatedAt { get; set; }

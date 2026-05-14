@@ -103,14 +103,14 @@ public class SalesController : BaseController
     /// </summary>
     /// <param name="id">Sale ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Confirmation of invoice sent</returns>
+    /// <returns>Invoice send result</returns>
     [HttpPost("{id:guid}/send-invoice")]
     [Authorize(Roles = "Staff,Admin")]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<bool>>> SendInvoice(Guid id, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ApiResponse<SendInvoiceResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<SendInvoiceResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<SendInvoiceResponse>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<SendInvoiceResponse>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<SendInvoiceResponse>>> SendInvoice(Guid id, CancellationToken cancellationToken)
     {
         var result = await _saleService.SendInvoiceAsync(id, cancellationToken);
         return result.ToActionResult();
