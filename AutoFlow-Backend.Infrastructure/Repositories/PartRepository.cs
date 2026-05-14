@@ -12,11 +12,17 @@ public class PartRepository(AppDbContext context)
 {
     public Task<PagedResponse<Part>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = Context.Parts
+        IQueryable<Part> query = Context.Parts
             .AsNoTracking()
             .Include(p => p.Vendor)
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.PartName);
+            .Where(p => p.IsActive);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(p => p.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(p => p.CreatedAt),
+            _                                => query.OrderBy(p => p.PartName)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

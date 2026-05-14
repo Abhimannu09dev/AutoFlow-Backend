@@ -41,7 +41,7 @@ public class StaffController : BaseController
     /// <summary>
     /// [Admin] Get all staff members
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=fullName, sortDir=asc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of staff members</returns>
     [HttpGet]

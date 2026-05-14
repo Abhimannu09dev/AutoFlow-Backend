@@ -12,12 +12,18 @@ public class PurchaseInvoiceRepository(AppDbContext context)
 {
     public Task<PagedResponse<PurchaseInvoice>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = Context.PurchaseInvoices
+        IQueryable<PurchaseInvoice> query = Context.PurchaseInvoices
             .AsNoTracking()
             .Include(p => p.Vendor)
             .Include(p => p.Items)
-                .ThenInclude(i => i.Part)
-            .OrderByDescending(p => p.InvoiceDate);
+                .ThenInclude(i => i.Part);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(p => p.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(p => p.CreatedAt),
+            _                                => query.OrderByDescending(p => p.InvoiceDate)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

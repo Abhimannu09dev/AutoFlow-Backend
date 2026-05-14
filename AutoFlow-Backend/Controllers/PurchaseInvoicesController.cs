@@ -45,7 +45,7 @@ public class PurchaseInvoicesController : BaseController
     /// <summary>
     /// [Admin] Get all purchase invoices
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=invoiceDate, sortDir=desc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of purchase invoices</returns>
     [HttpGet]

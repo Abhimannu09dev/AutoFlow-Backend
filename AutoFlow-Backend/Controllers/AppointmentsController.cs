@@ -44,7 +44,7 @@ public class AppointmentsController : BaseController
     /// <summary>
     /// [Customer, Staff, Admin] Get appointments. Customers see only their own; Staff/Admin see all.
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=date, sortDir=desc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of appointments</returns>
     [HttpGet]

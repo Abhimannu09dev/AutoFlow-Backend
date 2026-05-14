@@ -14,8 +14,14 @@ public class VehicleRepository : RepositoryBase<Vehicle>, IVehicleRepository
     public Task<PagedResponse<Vehicle>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = Context.Set<Vehicle>()
-            .AsNoTracking()
-            .OrderBy(v => v.VehicleNumber);
+            .AsNoTracking();
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(v => v.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(v => v.CreatedAt),
+            _                                => query.OrderBy(v => v.VehicleNumber)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }
@@ -24,8 +30,14 @@ public class VehicleRepository : RepositoryBase<Vehicle>, IVehicleRepository
     {
         var query = Context.Set<Vehicle>()
             .AsNoTracking()
-            .Where(v => v.UserId == userId)
-            .OrderBy(v => v.VehicleNumber);
+            .Where(v => v.UserId == userId);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(v => v.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(v => v.CreatedAt),
+            _                                => query.OrderBy(v => v.VehicleNumber)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

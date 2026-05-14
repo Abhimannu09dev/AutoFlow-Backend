@@ -49,14 +49,14 @@ public class CustomersController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all customers registered in the system
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and filter parameters (searchTerm, sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=fullName, sortDir=asc. SearchTerm filters by name, email, or phone.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of customers</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResponse<CustomerResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<PagedResponse<CustomerResponseDto>>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<PagedResponse<CustomerResponseDto>>>> GetAll(
-        [FromQuery] PagedRequest request,
+        [FromQuery] CustomerPagedRequest request,
         CancellationToken cancellationToken)
     {
         var response = await _customerService.GetAllAsync(request, cancellationToken);

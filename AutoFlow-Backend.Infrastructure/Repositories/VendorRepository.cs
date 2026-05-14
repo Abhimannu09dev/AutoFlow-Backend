@@ -14,8 +14,14 @@ public class VendorRepository(AppDbContext context)
     {
         var query = Context.Vendors
             .AsNoTracking()
-            .Where(v => v.IsActive)
-            .OrderBy(v => v.VendorName);
+            .Where(v => v.IsActive);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(v => v.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(v => v.CreatedAt),
+            _                                => query.OrderBy(v => v.VendorName)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

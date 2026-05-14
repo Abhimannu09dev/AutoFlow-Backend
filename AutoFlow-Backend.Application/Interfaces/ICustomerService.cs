@@ -9,7 +9,7 @@ namespace AutoFlow_Backend.Application.Interfaces;
 public interface ICustomerService
 {
     Task<ApiResponse<CustomerResponseDto>> CreateAsync(CustomerCreateDto request, CancellationToken cancellationToken = default);
-    Task<ApiResponse<PagedResponse<CustomerResponseDto>>> GetAllAsync(PagedRequest request, CancellationToken cancellationToken = default);
+    Task<ApiResponse<PagedResponse<CustomerResponseDto>>> GetAllAsync(DTOs.Customers.CustomerPagedRequest request, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<SaleResponse>>> GetPurchasesAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<AppointmentResponse>>> GetServicesAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<ApiResponse<List<CustomerResponseDto>>> SearchAsync(string query, CancellationToken cancellationToken = default);

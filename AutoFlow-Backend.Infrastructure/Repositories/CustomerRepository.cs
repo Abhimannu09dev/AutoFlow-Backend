@@ -1,4 +1,5 @@
 ﻿using AutoFlow_Backend.Application.Common;
+using AutoFlow_Backend.Application.DTOs.Customers;
 using AutoFlow_Backend.Application.Interfaces.Repositories;
 using AutoFlow_Backend.Domain.Entities;
 using AutoFlow_Backend.Infrastructure.Common;
@@ -11,11 +12,26 @@ public class CustomerRepository : RepositoryBase<Customer>, ICustomerRepository
 {
     public CustomerRepository(AppDbContext context) : base(context) { }
 
-    public Task<PagedResponse<Customer>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
+    public Task<PagedResponse<Customer>> GetPagedAsync(CustomerPagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = Context.Set<Customer>()
-            .AsNoTracking()
-            .OrderBy(c => c.FullName);
+            .AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim().ToLowerInvariant();
+            query = query.Where(c =>
+                c.FullName.ToLower().Contains(term) ||
+                c.Email.ToLower().Contains(term) ||
+                (c.Phone != null && c.Phone.ToLower().Contains(term)));
+        }
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(c => c.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(c => c.CreatedAt),
+            _                                => query.OrderBy(c => c.FullName)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

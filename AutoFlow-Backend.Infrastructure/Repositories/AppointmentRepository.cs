@@ -13,23 +13,33 @@ public class AppointmentRepository : RepositoryBase<Appointment>, IAppointmentRe
 
     public Task<PagedResponse<Appointment>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = Context.Set<Appointment>()
+        IQueryable<Appointment> query = Context.Set<Appointment>()
             .AsNoTracking()
-            .Include(a => a.Vehicle)
-            .OrderByDescending(a => a.Date)
-            .ThenBy(a => a.Time);
+            .Include(a => a.Vehicle);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(a => a.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(a => a.CreatedAt),
+            _                                => query.OrderByDescending(a => a.Date).ThenBy(a => a.Time)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }
 
     public Task<PagedResponse<Appointment>> GetPagedByCustomerIdAsync(Guid customerId, PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = Context.Set<Appointment>()
+        IQueryable<Appointment> query = Context.Set<Appointment>()
             .AsNoTracking()
             .Include(a => a.Vehicle)
-            .Where(a => a.CustomerId == customerId)
-            .OrderByDescending(a => a.Date)
-            .ThenBy(a => a.Time);
+            .Where(a => a.CustomerId == customerId);
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(a => a.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(a => a.CreatedAt),
+            _                                => query.OrderByDescending(a => a.Date).ThenBy(a => a.Time)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }

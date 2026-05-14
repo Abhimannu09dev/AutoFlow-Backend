@@ -16,4 +16,8 @@ public class PagedRequest
         get => _pageSize;
         set => _pageSize = value < 1 ? 1 : value > 100 ? 100 : value;
     }
+
+    public string? SortBy { get; set; }
+
+    public SortDirection SortDir { get; set; } = SortDirection.Asc;
 }

@@ -43,7 +43,7 @@ public class PartsController : BaseController
     /// <summary>
     /// [Admin, Staff] Get all parts in the inventory
     /// </summary>
-    /// <param name="request">Pagination parameters</param>
+    /// <param name="request">Pagination (page, pageSize) and sort parameters (sortBy, sortDir). Defaults: page=1, pageSize=20 (max 100), sortBy=partName, sortDir=asc.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of parts</returns>
     [HttpGet]

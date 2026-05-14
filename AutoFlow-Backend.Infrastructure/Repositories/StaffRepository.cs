@@ -13,8 +13,14 @@ public class StaffRepository(AppDbContext context)
     public Task<PagedResponse<Staff>> GetPagedAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = Context.Staff
-            .AsNoTracking()
-            .OrderBy(staff => staff.FullName);
+            .AsNoTracking();
+
+        query = (request.SortBy?.ToLower(), request.SortDir) switch
+        {
+            ("createdat", SortDirection.Desc) => query.OrderByDescending(s => s.CreatedAt),
+            ("createdat", _)                  => query.OrderBy(s => s.CreatedAt),
+            _                                => query.OrderBy(s => s.FullName)
+        };
 
         return PaginationHelper.ToPagedAsync(query, request, cancellationToken);
     }
