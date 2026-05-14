@@ -27,6 +27,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.AddScoped<DbContext, AppDbContext>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {
@@ -61,7 +62,6 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<INotificationSettings, NotificationSettings>();
         services.AddScoped<InvoiceTemplateBuilder>();
 
         services.AddJwtAuthentication(configuration);

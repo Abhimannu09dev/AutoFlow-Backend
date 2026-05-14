@@ -25,23 +25,11 @@ public class AdminProfileService : IAdminProfileService
         if (!requestingUserId.HasValue)
             return ApiResponseFactory.Fail<AdminProfileResponse>("Unauthorized request.", ErrorType.Unauthorized);
 
-        var profile = await _identityService.GetUserProfileAsync(requestingUserId.Value, cancellationToken);
-        if (profile is null)
+        var response = await BuildProfileResponseAsync(requestingUserId.Value, cancellationToken);
+        if (response is null)
             return ApiResponseFactory.FailNotFound<AdminProfileResponse>("Admin profile not found.");
 
-        var role = profile.Roles.FirstOrDefault(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-                   ?? profile.Roles.FirstOrDefault()
-                   ?? "Admin";
-
-        return ApiResponseFactory.Ok("Admin profile retrieved successfully.", new AdminProfileResponse
-        {
-            Id = profile.UserId,
-            FullName = profile.FullName,
-            Email = profile.Email,
-            Phone = profile.Phone,
-            Address = profile.Address,
-            Role = role
-        });
+        return ApiResponseFactory.Ok("Admin profile retrieved successfully.", response);
     }
 
     public async Task<ApiResponse<AdminProfileResponse>> UpdateProfileAsync(
@@ -80,23 +68,11 @@ public class AdminProfileService : IAdminProfileService
             await _staffRepository.SaveChangesAsync(cancellationToken);
         }
 
-        var refreshed = await _identityService.GetUserProfileAsync(requestingUserId.Value, cancellationToken);
-        if (refreshed is null)
+        var response = await BuildProfileResponseAsync(requestingUserId.Value, cancellationToken);
+        if (response is null)
             return ApiResponseFactory.FailNotFound<AdminProfileResponse>("Admin profile not found.");
 
-        var role = refreshed.Roles.FirstOrDefault(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-                   ?? refreshed.Roles.FirstOrDefault()
-                   ?? "Admin";
-
-        return ApiResponseFactory.Ok("Admin profile updated successfully.", new AdminProfileResponse
-        {
-            Id = refreshed.UserId,
-            FullName = refreshed.FullName,
-            Email = refreshed.Email,
-            Phone = refreshed.Phone,
-            Address = refreshed.Address,
-            Role = role
-        });
+        return ApiResponseFactory.Ok("Admin profile updated successfully.", response);
     }
 
     public async Task<ApiResponse<bool>> ChangePasswordAsync(
@@ -126,5 +102,30 @@ public class AdminProfileService : IAdminProfileService
             return ApiResponseFactory.Fail<bool>(passwordResult.Error ?? "Failed to change password.");
 
         return ApiResponseFactory.Ok("Admin password changed successfully.", true);
+    }
+
+    private async Task<AdminProfileResponse?> BuildProfileResponseAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await _identityService.GetUserProfileAsync(userId, cancellationToken);
+        if (profile is null)
+            return null;
+
+        var staffProfile = await _staffRepository.GetByApplicationUserIdAsync(userId, cancellationToken);
+
+        var role = profile.Roles.FirstOrDefault(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                   ?? profile.Roles.FirstOrDefault()
+                   ?? "Admin";
+
+        return new AdminProfileResponse
+        {
+            Id = profile.UserId,
+            FullName = profile.FullName,
+            Email = profile.Email,
+            Phone = staffProfile?.PhoneNumber ?? profile.Phone,
+            Address = staffProfile?.Address ?? profile.Address,
+            Role = role
+        };
     }
 }

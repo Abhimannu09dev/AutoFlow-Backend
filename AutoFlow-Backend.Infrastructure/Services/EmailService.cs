@@ -40,6 +40,14 @@ public class EmailService : IEmailService
         await client.DisconnectAsync(true, cancellationToken);
     }
 
+    public async Task SendAdminAlertAsync(
+        string subject,
+        string body,
+        CancellationToken cancellationToken = default)
+    {
+        await SendAsync(_emailSettings.AdminEmail, subject, body, cancellationToken);
+    }
+
     public async Task SendInvoiceAsync(SaleInvoiceDto invoice, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(invoice.CustomerEmail))

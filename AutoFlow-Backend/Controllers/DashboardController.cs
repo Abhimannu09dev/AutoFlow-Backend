@@ -53,11 +53,11 @@ public class DashboardController : BaseController
     [ProducesResponseType(typeof(ApiResponse<List<RevenueTrendPointResponse>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<List<RevenueTrendPointResponse>>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<List<RevenueTrendPointResponse>>>> GetRevenueTrend(
-        [FromQuery] string range = "daily",
+        [FromQuery] RevenueTrendRange range = RevenueTrendRange.Daily,
         CancellationToken cancellationToken = default)
     {
         var response = await _dashboardService.GetRevenueTrendAsync(range, cancellationToken);
-        return response.IsSuccess ? Ok(response) : BadRequest(response);
+        return Ok(response);
     }
 
     /// <summary>
