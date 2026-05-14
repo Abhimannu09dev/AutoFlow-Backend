@@ -82,7 +82,7 @@ public class AuthController : BaseController
             return Unauthorized(ApiResponseFactory.Fail<bool>("Invalid user token."));
 
         var (succeeded, error) = await _identityService.ChangePasswordAsync(
-            userId.Value.ToString(),
+            userId.Value,
             request.CurrentPassword,
             request.NewPassword,
             cancellationToken);
