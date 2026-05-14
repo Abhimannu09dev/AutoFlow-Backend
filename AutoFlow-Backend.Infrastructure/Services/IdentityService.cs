@@ -128,4 +128,20 @@ public class IdentityService : IIdentityService
         if (user is not null)
             await _userManager.DeleteAsync(user);
     }
+
+    public async Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
+        string userId,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+            return (false, "User not found.");
+
+        var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        return result.Succeeded
+            ? (true, null)
+            : (false, string.Join(" ", result.Errors.Select(e => e.Description)));
+    }
 }

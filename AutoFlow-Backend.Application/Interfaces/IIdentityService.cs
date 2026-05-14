@@ -39,4 +39,10 @@ public interface IIdentityService
     Task DeleteUserAsync(
         string userId,
         CancellationToken cancellationToken = default);
+
+    Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
+        string userId,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken = default);
 }
