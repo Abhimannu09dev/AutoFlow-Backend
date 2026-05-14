@@ -42,6 +42,12 @@ public interface IIdentityService
         string userId,
         CancellationToken cancellationToken = default);
 
+    Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
+        Guid userId,
+        string currentPassword,
+        string newPassword,
+        CancellationToken cancellationToken = default);
+
     Task<IdentityUserProfileReadModel?> GetUserProfileAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
@@ -51,11 +57,5 @@ public interface IIdentityService
         string fullName,
         string? phone,
         string? address,
-        CancellationToken cancellationToken = default);
-
-    Task<(bool Succeeded, string? Error)> ChangePasswordAsync(
-        Guid userId,
-        string currentPassword,
-        string newPassword,
         CancellationToken cancellationToken = default);
 }

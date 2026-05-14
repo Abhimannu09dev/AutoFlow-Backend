@@ -158,7 +158,7 @@ public class IdentityService : IIdentityService
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null)
-            return (false, "Admin profile not found.");
+            return (false, "User not found.");
 
         user.FullName = fullName;
         user.PhoneNumber = phone;
@@ -179,7 +179,7 @@ public class IdentityService : IIdentityService
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null)
-            return (false, "Admin profile not found.");
+            return (false, "User not found.");
 
         var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
         return result.Succeeded
