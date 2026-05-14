@@ -6,6 +6,8 @@ using AutoFlow_Backend.Application.Mappers;
 using AutoFlow_Backend.Domain.Entities;
 using FluentValidation;
 
+
+
 namespace AutoFlow_Backend.Application.Services;
 
 public class VehicleService : IVehicleService
@@ -73,7 +75,8 @@ public class VehicleService : IVehicleService
         await _vehicleRepository.AddAsync(vehicle, cancellationToken);
         await _vehicleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vehicle created successfully.", vehicle.ToResponse());
+        var ownerCustomer = await _customerRepository.GetByApplicationUserIdAsync(targetUserId, cancellationToken);
+        return ApiResponseFactory.Ok("Vehicle created successfully.", vehicle.ToResponse(ownerCustomer));
     }
 
     public async Task<ApiResponse<PagedResponse<VehicleResponseDto>>> GetAllAsync(
@@ -97,7 +100,10 @@ public class VehicleService : IVehicleService
             return ApiResponseFactory.Fail<PagedResponse<VehicleResponseDto>>("Unable to determine user.");
         }
 
-        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", paged.Map(v => v.ToResponse()));
+        var userIds = paged.Items.Select(v => v.UserId).Distinct().ToList();
+        var customers = await _customerRepository.GetByApplicationUserIdsAsync(userIds, cancellationToken);
+        var customerMap = customers.ToDictionary(c => c.ApplicationUserId!.Value);
+        return ApiResponseFactory.Ok("Vehicles retrieved successfully.", paged.Map(v => v.ToResponse(customerMap.GetValueOrDefault(v.UserId))));
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> GetByIdAsync(
@@ -113,7 +119,8 @@ public class VehicleService : IVehicleService
         if (!isStaffOrAdmin && (!requestingUserId.HasValue || vehicle.UserId != requestingUserId.Value))
             return ApiResponseFactory.FailNotFound<VehicleResponseDto>("Vehicle not found.");
 
-        return ApiResponseFactory.Ok("Vehicle retrieved successfully.", vehicle.ToResponse());
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(vehicle.UserId, cancellationToken);
+        return ApiResponseFactory.Ok("Vehicle retrieved successfully.", vehicle.ToResponse(customer));
     }
 
     public async Task<ApiResponse<List<VehicleResponseDto>>> GetMyVehiclesAsync(
@@ -121,7 +128,10 @@ public class VehicleService : IVehicleService
         CancellationToken cancellationToken = default)
     {
         var vehicles = await _vehicleRepository.GetByUserIdAsync(userId, cancellationToken);
-        return ApiResponseFactory.Ok("My vehicles retrieved successfully.", vehicles.Select(v => v.ToResponse()).ToList());
+        var userIds = vehicles.Select(v => v.UserId).Distinct().ToList();
+        var customers = await _customerRepository.GetByApplicationUserIdsAsync(userIds, cancellationToken);
+        var customerMap = customers.ToDictionary(c => c.ApplicationUserId!.Value);
+        return ApiResponseFactory.Ok("My vehicles retrieved successfully.", vehicles.Select(v => v.ToResponse(customerMap.GetValueOrDefault(v.UserId))).ToList());
     }
 
     public async Task<ApiResponse<VehicleResponseDto>> UpdateAsync(
@@ -159,7 +169,8 @@ public class VehicleService : IVehicleService
         _vehicleRepository.Update(vehicle);
         await _vehicleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok("Vehicle updated successfully.", vehicle.ToResponse());
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(vehicle.UserId, cancellationToken);
+        return ApiResponseFactory.Ok("Vehicle updated successfully.", vehicle.ToResponse(customer));
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(

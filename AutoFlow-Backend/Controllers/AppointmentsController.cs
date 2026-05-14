@@ -81,4 +81,27 @@ public class AppointmentsController : BaseController
         var response = await _appointmentService.GetByIdAsync(id, userId, isStaffOrAdmin, cancellationToken);
         return response.ToActionResult();
     }
+
+    /// <summary>
+    /// [Admin, Staff] Update the status of an appointment.
+    /// Valid values: Pending, Confirmed, InProgress, Completed, Cancelled.
+    /// </summary>
+    /// <param name="id">Appointment ID</param>
+    /// <param name="request">New status value</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated appointment details</returns>
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "Admin,Staff")]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<AppointmentResponse>>> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateAppointmentStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _appointmentService.UpdateStatusAsync(id, request, cancellationToken);
+        return response.ToActionResult();
+    }
 }

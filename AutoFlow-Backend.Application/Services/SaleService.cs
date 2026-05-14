@@ -150,26 +150,50 @@ public class SaleService : ISaleService
         return ApiResponseFactory.Ok("Sales retrieved successfully.", sales.Select(SaleMapper.ToResponse).ToList());
     }
 
-    public async Task<ApiResponse<bool>> SendInvoiceAsync(Guid saleId, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<SendInvoiceResponse>> SendInvoiceAsync(Guid saleId, CancellationToken cancellationToken = default)
     {
         var sale = await _saleRepository.GetByIdForInvoiceAsync(saleId, cancellationToken);
         if (sale is null)
-            return ApiResponseFactory.FailNotFound<bool>("Sale not found.");
+            return ApiResponseFactory.FailNotFound<SendInvoiceResponse>("Sale not found.");
 
         if (sale.Customer is null || string.IsNullOrWhiteSpace(sale.Customer.Email))
-            return ApiResponseFactory.Fail<bool>("Customer email not available. Invoice cannot be sent.");
+            return ApiResponseFactory.Fail<SendInvoiceResponse>("Customer email not available. Invoice cannot be sent.");
 
         var invoiceDto = SaleMapper.ToInvoiceDto(sale);
-        await _emailService.SendInvoiceAsync(invoiceDto, cancellationToken);
 
-        sale.InvoiceSentAt = DateTime.UtcNow;
-        sale.InvoiceEmail = sale.Customer.Email;
-        sale.InvoiceFailedAt = null;
-        sale.InvoiceFailureReason = null;
+        try
+        {
+            await _emailService.SendInvoiceAsync(invoiceDto, cancellationToken);
+
+            sale.InvoiceSentAt = DateTime.UtcNow;
+            sale.InvoiceEmail = sale.Customer.Email;
+            sale.InvoiceFailedAt = null;
+            sale.InvoiceFailureReason = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send invoice for sale {SaleId}", sale.Id);
+
+            sale.InvoiceFailedAt = DateTime.UtcNow;
+            sale.InvoiceFailureReason = ex.Message.Length > 500
+                ? ex.Message[..500]
+                : ex.Message;
+            _saleRepository.Update(sale);
+            await _saleRepository.SaveChangesAsync(cancellationToken);
+
+            return ApiResponseFactory.Fail<SendInvoiceResponse>("Invoice could not be sent. Try again later.");
+        }
+
         _saleRepository.Update(sale);
         await _saleRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiResponseFactory.Ok($"Invoice sent to {sale.Customer.Email}.", true);
+        return ApiResponseFactory.Ok($"Invoice sent to {sale.Customer.Email}.", new SendInvoiceResponse
+        {
+            SaleId = sale.Id,
+            InvoiceSentAt = sale.InvoiceSentAt,
+            InvoiceFailedAt = sale.InvoiceFailedAt,
+            InvoiceFailureReason = sale.InvoiceFailureReason
+        });
     }
 
     private async Task TrySendInvoiceAsync(Sale sale, CancellationToken cancellationToken)

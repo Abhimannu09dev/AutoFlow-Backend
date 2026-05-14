@@ -22,4 +22,9 @@ public interface IAppointmentService
         Guid? requestingUserId,
         bool isStaffOrAdmin,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<AppointmentResponse>> UpdateStatusAsync(
+        Guid id,
+        UpdateAppointmentStatusRequest request,
+        CancellationToken cancellationToken = default);
 }
