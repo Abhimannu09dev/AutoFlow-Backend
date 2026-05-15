@@ -18,6 +18,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<CreditPayment> CreditPayments => Set<CreditPayment>();
     public DbSet<PartRequest> PartRequests => Set<PartRequest>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();

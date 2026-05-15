@@ -8,6 +8,8 @@ using AutoFlow_Backend.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using CreditStatusEnum = AutoFlow_Backend.Domain.Enums.CreditStatus;
+
 namespace AutoFlow_Backend.Application.Services;
 
 public class SaleService : ISaleService
@@ -96,22 +98,30 @@ public class SaleService : ISaleService
                 _partRepository.Update(part);
             }
 
+            var saleDate = DateTime.UtcNow;
+
             sale = new Sale
             {
                 Id = Guid.NewGuid(),
                 CustomerId = request.CustomerId,
                 StaffId = staffId,
                 InvoiceNumber = GenerateInvoiceNumber(),
-                SaleDate = DateTime.UtcNow,
+                SaleDate = saleDate,
                 SubTotal = subTotal,
                 DiscountAmount = discountAmount,
                 TotalAmount = totalAmount,
                 PaymentMethod = request.PaymentMethod,
                 Status = SaleStatus.Completed,
                 Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = saleDate,
                 SaleItems = saleItems
             };
+
+            if (request.PaymentMethod == PaymentMethod.Credit)
+            {
+                sale.CreditStatus = CreditStatusEnum.Outstanding;
+                sale.DueDate = saleDate.AddDays(30);
+            }
 
             await _saleRepository.AddAsync(sale, cancellationToken);
             await _saleRepository.SaveChangesAsync(cancellationToken);

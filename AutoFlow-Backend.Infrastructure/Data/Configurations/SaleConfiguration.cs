@@ -18,6 +18,17 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         entity.Property(s => s.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         entity.Property(s => s.Notes).HasMaxLength(500);
         entity.Property(s => s.CreatedAt).IsRequired();
+        entity.Property(s => s.CreditStatus)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        entity.Property(s => s.DueDate);
+
+        entity.HasMany(s => s.CreditPayments)
+            .WithOne(cp => cp.Sale)
+            .HasForeignKey(cp => cp.SaleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         entity.HasOne(s => s.Customer)
               .WithMany()
               .HasForeignKey(s => s.CustomerId)
