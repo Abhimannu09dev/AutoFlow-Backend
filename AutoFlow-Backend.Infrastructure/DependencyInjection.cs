@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IPartRequestRepository, PartRequestRepository>();
         services.AddScoped<IReportQueryRepository, ReportQueryRepository>();
+        services.AddScoped<ICreditPaymentRepository, CreditPaymentRepository>();
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthService, AuthService>();

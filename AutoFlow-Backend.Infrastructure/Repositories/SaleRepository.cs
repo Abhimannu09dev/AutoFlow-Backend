@@ -85,4 +85,12 @@ public class SaleRepository(AppDbContext context)
                 .ThenInclude(si => si.Part)
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
+
+    public Task<Sale?> GetByIdWithCreditPaymentsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return Context.Sales
+            .Include(s => s.Customer)
+            .Include(s => s.CreditPayments)
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+    }
 }

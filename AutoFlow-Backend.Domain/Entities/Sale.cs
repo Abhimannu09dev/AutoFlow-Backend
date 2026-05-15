@@ -23,5 +23,8 @@ public class Sale
     public DateTime? UpdatedAt { get; set; }
     public Customer? Customer { get; set; }
     public Staff? Staff { get; set; }
+    public CreditStatus? CreditStatus { get; set; }
+    public DateTime? DueDate { get; set; }
+    public ICollection<CreditPayment> CreditPayments { get; set; } = [];
     public ICollection<SaleItem> SaleItems { get; set; } = new List<SaleItem>();
 }
