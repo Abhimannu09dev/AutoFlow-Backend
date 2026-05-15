@@ -172,7 +172,7 @@ public class CreditService : ICreditService
         Guid saleId,
         CancellationToken cancellationToken = default)
     {
-        var sale = await _saleRepository.GetByIdForInvoiceAsync(saleId, cancellationToken);
+        var sale = await _saleRepository.GetByIdWithCreditPaymentsAsync(saleId, cancellationToken);
         if (sale is null)
             return ApiResponseFactory.FailNotFound<SendCreditReminderResponse>("Sale not found.");
 
@@ -184,8 +184,111 @@ public class CreditService : ICreditService
 
         try
         {
+            var dueDate = sale.DueDate ?? sale.SaleDate.AddDays(30);
+            var paidAmount = sale.CreditPayments.Sum(p => p.Amount);
+            var remainingAmount = Math.Max(0, sale.TotalAmount - paidAmount);
+            var daysOverdue = Math.Max(0, (int)(DateTime.UtcNow.Date - dueDate.Date).TotalDays);
+            var status = sale.CreditStatus?.ToString() ?? "Outstanding";
+
+            var customerName = string.IsNullOrWhiteSpace(sale.Customer.FullName) ? "Customer" : sale.Customer.FullName;
             var subject = $"Credit Payment Reminder - {sale.InvoiceNumber}";
-            var body = $"Dear {sale.Customer.FullName},\n\nThis is a reminder that credit payment for invoice {sale.InvoiceNumber} is due.\n\nAmount: ${sale.TotalAmount:F2}\nDue Date: {sale.DueDate:yyyy-MM-dd}\n\nThank you for your business.";
+            string Escape(string value) =>
+                value
+                    .Replace("&", "&amp;", StringComparison.Ordinal)
+                    .Replace("<", "&lt;", StringComparison.Ordinal)
+                    .Replace(">", "&gt;", StringComparison.Ordinal)
+                    .Replace("\"", "&quot;", StringComparison.Ordinal)
+                    .Replace("'", "&#39;", StringComparison.Ordinal);
+
+            var paymentRows = sale.CreditPayments
+                .OrderBy(p => p.PaymentDate)
+                .Select(p =>
+                    "<tr>" +
+                    "<td style=\"padding:10px;border:1px solid #e5e7eb;\">" + Escape(p.PaymentDate.ToString("MMM dd, yyyy")) + "</td>" +
+                    "<td style=\"padding:10px;border:1px solid #e5e7eb;\">" + Escape(p.PaymentMethod.ToString()) + "</td>" +
+                    "<td style=\"padding:10px;border:1px solid #e5e7eb;text-align:right;\">$" + p.Amount.ToString("F2") + "</td>" +
+                    "<td style=\"padding:10px;border:1px solid #e5e7eb;\">" + Escape(p.Note ?? "-") + "</td>" +
+                    "</tr>")
+                .ToList();
+
+            var paymentHistorySection = paymentRows.Count == 0
+                ? "<p style=\"margin:0;color:#64748b;font-size:13px;\">No payments recorded yet.</p>"
+                : "<table style=\"width:100%;border-collapse:collapse;margin-top:12px;\">" +
+                  "<thead><tr style=\"background:#1a3c6e;color:#fff;\">" +
+                  "<th style=\"padding:10px;text-align:left;\">Payment Date</th>" +
+                  "<th style=\"padding:10px;text-align:left;\">Method</th>" +
+                  "<th style=\"padding:10px;text-align:right;\">Amount</th>" +
+                  "<th style=\"padding:10px;text-align:left;\">Note</th>" +
+                  "</tr></thead><tbody>" + string.Join("", paymentRows) + "</tbody></table>";
+
+            var customerEmail = string.IsNullOrWhiteSpace(sale.Customer.Email) ? "-" : sale.Customer.Email;
+            var customerPhone = string.IsNullOrWhiteSpace(sale.Customer.Phone) ? "-" : sale.Customer.Phone;
+
+            var body =
+                "<!DOCTYPE html>" +
+                "<html><head><meta charset=\"utf-8\"/>" +
+                "<style>" +
+                "body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f5f5f5;color:#1f2937;}" +
+                ".container{max-width:900px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);}" +
+                ".header{background:#183f73;color:#ffffff;text-align:center;padding:28px;}" +
+                ".header h1{margin:0;font-size:30px;}" +
+                ".header p{margin:8px 0 0;color:#dbeafe;font-size:13px;}" +
+                ".section{padding:24px;}" +
+                ".meta{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:20px;}" +
+                ".meta table{width:100%;}" +
+                ".meta td{vertical-align:top;}" +
+                ".meta-title{color:#64748b;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;margin:0;}" +
+                ".meta-name{margin:6px 0 2px 0;font-size:20px;color:#0f172a;}" +
+                ".meta-line{margin:2px 0;color:#475569;font-size:13px;}" +
+                ".right{text-align:right;}" +
+                ".right h2{margin:0 0 8px 0;font-size:24px;color:#183f73;}" +
+                ".summary{width:100%;border-collapse:collapse;margin-top:22px;}" +
+                ".summary th{background:#183f73;color:#ffffff;padding:12px;text-align:left;font-size:13px;}" +
+                ".summary td{padding:12px;border:1px solid #e5e7eb;font-size:14px;}" +
+                ".amount{text-align:right;}" +
+                ".remaining{font-weight:700;color:#b91c1c;}" +
+                ".balance{margin-top:18px;text-align:right;font-size:22px;color:#183f73;font-weight:700;}" +
+                ".note{margin-top:14px;color:#334155;font-size:14px;}" +
+                ".footer{padding:18px 24px;border-top:1px solid #e5e7eb;text-align:center;color:#64748b;font-size:12px;}" +
+                "</style></head><body>" +
+                "<div class=\"container\">" +
+                "<div class=\"header\">" +
+                "<h1>AutoFlow Auto Repair</h1>" +
+                "<p>Your Trusted Auto Repair Partner | info@autoflow.com | (555) 123-4567</p>" +
+                "</div>" +
+                "<div class=\"section\">" +
+                "<div class=\"meta\"><table><tr>" +
+                "<td>" +
+                "<p class=\"meta-title\">Reminder To</p>" +
+                "<h3 class=\"meta-name\">" + Escape(customerName) + "</h3>" +
+                "<p class=\"meta-line\">" + Escape(customerEmail) + "</p>" +
+                "<p class=\"meta-line\">" + Escape(customerPhone) + "</p>" +
+                "</td>" +
+                "<td class=\"right\">" +
+                "<h2>CREDIT PAYMENT REMINDER</h2>" +
+                "<p class=\"meta-line\"><strong>Invoice #:</strong> " + Escape(sale.InvoiceNumber) + "</p>" +
+                "<p class=\"meta-line\"><strong>Sale Date:</strong> " + Escape(sale.SaleDate.ToString("MMM dd, yyyy")) + "</p>" +
+                "<p class=\"meta-line\"><strong>Due Date:</strong> " + Escape(dueDate.ToString("MMM dd, yyyy")) + "</p>" +
+                "<p class=\"meta-line\"><strong>Status:</strong> " + Escape(status) + "</p>" +
+                "</td>" +
+                "</tr></table></div>" +
+                "<table class=\"summary\">" +
+                "<thead><tr><th>Description</th><th class=\"amount\">Amount</th></tr></thead>" +
+                "<tbody>" +
+                "<tr><td>Total Credit Amount</td><td class=\"amount\">$" + sale.TotalAmount.ToString("F2") + "</td></tr>" +
+                "<tr><td>Paid Amount</td><td class=\"amount\">$" + paidAmount.ToString("F2") + "</td></tr>" +
+                "<tr><td><strong>Remaining Amount</strong></td><td class=\"amount remaining\">$" + remainingAmount.ToString("F2") + "</td></tr>" +
+                "</tbody></table>" +
+                "<p class=\"balance\">Your remaining credit balance is $" + remainingAmount.ToString("F2") + "</p>" +
+                "<p class=\"note\">Please make payment by the due date to avoid overdue status.</p>" +
+                "<h4 style=\"margin:26px 0 8px 0;color:#183f73;\">Payment History</h4>" +
+                paymentHistorySection +
+                "</div>" +
+                "<div class=\"footer\">" +
+                "<p style=\"margin:0;\">This is a friendly reminder about your remaining credit balance.</p>" +
+                "<p style=\"margin:6px 0 0 0;\">Thank you for choosing AutoFlow Auto Repair.</p>" +
+                "</div>" +
+                "</div></body></html>";
 
             await _emailService.SendAsync(sale.Customer.Email, subject, body, cancellationToken);
 
