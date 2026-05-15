@@ -104,4 +104,26 @@ public class AppointmentsController : BaseController
         var response = await _appointmentService.UpdateStatusAsync(id, request, cancellationToken);
         return response.ToActionResult();
     }
+
+    /// <summary>
+    /// [Customer] Cancel an appointment owned by the authenticated customer.
+    /// </summary>
+    /// <param name="id">Appointment ID</param>
+    /// <param name="request">Cancellation request payload</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated appointment details</returns>
+    [HttpPatch("{id:guid}/cancel")]
+    [Authorize(Roles = "Customer")]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<AppointmentResponse>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<AppointmentResponse>>> Cancel(
+        Guid id,
+        [FromBody] CancelAppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _appointmentService.CancelAsync(id, request, GetUserId(), cancellationToken);
+        return response.ToActionResult();
+    }
 }

@@ -27,4 +27,10 @@ public interface IAppointmentService
         Guid id,
         UpdateAppointmentStatusRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<AppointmentResponse>> CancelAsync(
+        Guid id,
+        CancelAppointmentRequest request,
+        Guid? requestingUserId,
+        CancellationToken cancellationToken = default);
 }
