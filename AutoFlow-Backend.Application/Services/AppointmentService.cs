@@ -155,4 +155,39 @@ public class AppointmentService : IAppointmentService
 
         return ApiResponseFactory.Ok("Appointment status updated successfully.", AppointmentMapper.ToResponse(appointment));
     }
+
+    public async Task<ApiResponse<AppointmentResponse>> CancelAsync(
+        Guid id,
+        CancelAppointmentRequest request,
+        Guid? requestingUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!requestingUserId.HasValue)
+            return ApiResponseFactory.Fail<AppointmentResponse>("Unauthorized request.", ErrorType.Unauthorized);
+
+        var customer = await _customerRepository.GetByApplicationUserIdAsync(requestingUserId.Value, cancellationToken);
+        if (customer is null)
+            return ApiResponseFactory.Fail<AppointmentResponse>("Customer profile not found. Please contact support.");
+
+        var appointment = await _appointmentRepository.GetByIdAsync(id, cancellationToken);
+        if (appointment is null)
+            return ApiResponseFactory.FailNotFound<AppointmentResponse>("Appointment not found.");
+
+        if (appointment.CustomerId != customer.Id)
+            return ApiResponseFactory.Fail<AppointmentResponse>("You can cancel only your own appointments.");
+
+        if (appointment.Status == AppointmentStatus.Completed)
+            return ApiResponseFactory.Fail<AppointmentResponse>("Completed appointments cannot be cancelled.");
+
+        if (appointment.Status == AppointmentStatus.Cancelled)
+            return ApiResponseFactory.Fail<AppointmentResponse>("Appointment is already cancelled.");
+
+        appointment.Status = AppointmentStatus.Cancelled;
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        _appointmentRepository.Update(appointment);
+        await _appointmentRepository.SaveChangesAsync(cancellationToken);
+
+        return ApiResponseFactory.Ok("Appointment cancelled successfully.", AppointmentMapper.ToResponse(appointment));
+    }
 }
