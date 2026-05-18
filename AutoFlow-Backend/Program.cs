@@ -2,6 +2,7 @@ using AutoFlow_Backend.Application;
 using AutoFlow_Backend.Converters;
 using AutoFlow_Backend.Infrastructure;
 using AutoFlow_Backend.Infrastructure.Identity;
+using AutoFlow_Backend.Infrastructure.Seed;
 using AutoFlow_Backend.Middleware;
 using AutoFlow_Backend.Application.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -114,6 +115,17 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+if (args.Contains("--reset-and-seed-dev", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("Refusing to reset database outside Development environment.");
+    }
+
+    await DevDatabaseSeeder.ResetAndSeedAsync(app.Services);
+    return;
+}
 
 await IdentitySeeder.SeedRolesAsync(app.Services);
 
