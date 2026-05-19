@@ -41,13 +41,26 @@ public class VendorService : IVendorService
             return ApiResponseFactory.Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
+        var normalizedEmail = StringNormalizer.NormalizeOptional(request.Email);
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            var duplicateEmail = await _vendorRepository.ExistsByEmailAsync(
+                normalizedEmail.ToLowerInvariant(),
+                null,
+                cancellationToken);
+            if (duplicateEmail)
+            {
+                return ApiResponseFactory.Fail<VendorResponse>("Vendor email already exists.");
+            }
+        }
+
         var vendor = new Vendor
         {
             Id = Guid.NewGuid(),
             VendorName = request.VendorName.Trim(),
             ContactPerson = StringNormalizer.NormalizeOptional(request.ContactPerson),
             Phone = request.Phone.Trim(),
-            Email = StringNormalizer.NormalizeOptional(request.Email),
+            Email = normalizedEmail,
             Address = StringNormalizer.NormalizeOptional(request.Address),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -102,10 +115,23 @@ public class VendorService : IVendorService
             return ApiResponseFactory.Fail<VendorResponse>("Duplicate vendor name is not allowed.");
         }
 
+        var normalizedEmail = StringNormalizer.NormalizeOptional(request.Email);
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            var duplicateEmail = await _vendorRepository.ExistsByEmailAsync(
+                normalizedEmail.ToLowerInvariant(),
+                id,
+                cancellationToken);
+            if (duplicateEmail)
+            {
+                return ApiResponseFactory.Fail<VendorResponse>("Vendor email already exists.");
+            }
+        }
+
         vendor.VendorName = request.VendorName.Trim();
         vendor.ContactPerson = StringNormalizer.NormalizeOptional(request.ContactPerson);
         vendor.Phone = request.Phone.Trim();
-        vendor.Email = StringNormalizer.NormalizeOptional(request.Email);
+        vendor.Email = normalizedEmail;
         vendor.Address = StringNormalizer.NormalizeOptional(request.Address);
         vendor.UpdatedAt = DateTime.UtcNow;
 
