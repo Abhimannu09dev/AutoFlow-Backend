@@ -43,6 +43,23 @@ public class VendorRepository(AppDbContext context)
         return query.AnyAsync(cancellationToken);
     }
 
+    public Task<bool> ExistsByEmailAsync(
+        string normalizedEmail,
+        Guid? excludeId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = Context.Vendors
+            .AsNoTracking()
+            .Where(v => v.Email != null && v.Email.ToLower() == normalizedEmail);
+
+        if (excludeId.HasValue)
+        {
+            query = query.Where(v => v.Id != excludeId.Value);
+        }
+
+        return query.AnyAsync(cancellationToken);
+    }
+
     public Task<List<Vendor>> GetActiveAsync(CancellationToken cancellationToken = default)
     {
         return Context.Vendors
